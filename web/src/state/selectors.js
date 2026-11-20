@@ -21,6 +21,12 @@ export const stageCount = (store, sw, st) => {
   return data ? data.count : 0
 }
 
+// "₹4,52,100" — what the stage's items add up to, where the source says
+export const stageValue = (store, sw, st) => {
+  const data = stageData(store, sw, st.key)
+  return data ? data.valueText : ''
+}
+
 export const visibleItems = (store, sw, st) => {
   const data = stageData(store, sw, st.key)
   return data ? data.items : []
