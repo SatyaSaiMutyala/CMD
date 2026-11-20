@@ -14,16 +14,23 @@ module.exports = {
   // This server's own address as the apps reach it (https://hub.example.com).
   // Used to build document links. Empty = taken from each request.
   publicUrl: process.env.PUBLIC_URL || '',
+  // The two keys shared with every connected project (see .env.example):
+  //   hubApiKey      sent by us, as X-Api-Key, when we call a project
+  //   hubWebhookKey  sent by a project, as X-Api-Key, when it calls our webhook
+  // A project can still be given keys of its own (LEDGERTRACE_API_KEY,
+  // HOOK_KEY_LEDGERTRACE, ...); where one is set it is used instead.
+  hubApiKey: process.env.HUB_API_KEY || '',
+  hubWebhookKey: process.env.HUB_WEBHOOK_KEY || '',
   // LedgerTrace: where its /api/cmdhub/* lives, and the key it expects from us.
   ledgertrace: {
     url: process.env.LEDGERTRACE_API_URL || '',
-    key: process.env.LEDGERTRACE_API_KEY || '',
+    key: process.env.LEDGERTRACE_API_KEY || process.env.HUB_API_KEY || '',
     timeoutMs: Number(process.env.LEDGERTRACE_TIMEOUT_MS) || 15000,
   },
   // eDOS: where its /api/cmdhub/* lives, and the key it expects from us.
   edos: {
     url: process.env.EDOS_API_URL || '',
-    key: process.env.EDOS_API_KEY || '',
+    key: process.env.EDOS_API_KEY || process.env.HUB_API_KEY || '',
     timeoutMs: Number(process.env.EDOS_TIMEOUT_MS) || 15000,
   },
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',

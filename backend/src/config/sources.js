@@ -1,9 +1,9 @@
 // The software that sends CMD-level approvals to the hub. The ids match the
 // registry in the web and mobile apps.
 //
-// Each one calls our webhook with its own key, set in .env as HOOK_KEY_<ID>
-// (for example HOOK_KEY_LEDGERTRACE). A source with no key configured is
-// rejected, so a new project cannot post here until it has been given one.
+// Each one calls our webhook with a key: the shared HUB_WEBHOOK_KEY, or its
+// own, set in .env as HOOK_KEY_<ID> (for example HOOK_KEY_LEDGERTRACE), which
+// wins where it is set. With neither configured a source is rejected.
 const SOURCES = [
   {
     id: 'ledgertrace',
@@ -27,6 +27,8 @@ const SOURCES = [
 
 const findSource = (id) => SOURCES.find((s) => s.id === String(id || '').toLowerCase()) || null;
 
-const hookKey = (id) => process.env[`HOOK_KEY_${String(id).toUpperCase()}`] || '';
+// The key a source must send to our webhook: its own if it has one, otherwise
+// the one shared by every project (HUB_WEBHOOK_KEY).
+const hookKey = (id) => process.env[`HOOK_KEY_${String(id).toUpperCase()}`] || process.env.HUB_WEBHOOK_KEY || '';
 
 module.exports = { SOURCES, findSource, hookKey };

@@ -215,3 +215,42 @@ test('a request sent for approval reaches an open app at once; a decision only r
   const { bySoftware } = (await call('GET', '/api/pending', { headers: authed() })).json;
   assert.equal(bySoftware.find((s) => s.software === 'edos').pending, 1);
 });
+
+test('one shared pair of keys serves every project; a project\'s own key wins where set', async () => {
+  const { hookKey } = require('../src/config/sources');
+  const fresh = () => {
+    delete require.cache[require.resolve('../src/config/env')];
+    return require('../src/config/env');
+  };
+  const kept = { ...process.env };
+  try {
+    // Only the shared pair set
+    // Emptied, not removed: reloading the settings re-reads this computer's
+    // .env, which must not put its own values back
+    process.env.HOOK_KEY_EDOS = '';
+    process.env.HOOK_KEY_LEDGERTRACE = '';
+    process.env.EDOS_API_KEY = '';
+    process.env.LEDGERTRACE_API_KEY = '';
+    process.env.HUB_API_KEY = 'shared-api';
+    process.env.HUB_WEBHOOK_KEY = 'shared-hook';
+    assert.equal(fresh().edos.key, 'shared-api');
+    assert.equal(fresh().ledgertrace.key, 'shared-api');
+    assert.equal(hookKey('edos'), 'shared-hook');
+    assert.equal(hookKey('ledgertrace'), 'shared-hook');
+    assert.equal((await hook({ changes: [] }, 'shared-hook')).status, 200);
+    assert.equal((await hook({ changes: [] }, 'edos-hook-key')).status, 401);
+
+    // One project given keys of its own
+    process.env.EDOS_API_KEY = 'edos-own-api';
+    process.env.HOOK_KEY_EDOS = 'edos-own-hook';
+    assert.equal(fresh().edos.key, 'edos-own-api');
+    assert.equal(fresh().ledgertrace.key, 'shared-api');
+    assert.equal(hookKey('edos'), 'edos-own-hook');
+    assert.equal(hookKey('ledgertrace'), 'shared-hook');
+    assert.equal((await hook({ changes: [] }, 'shared-hook')).status, 401);
+  } finally {
+    Object.keys(process.env).forEach((k) => { if (!(k in kept)) delete process.env[k]; });
+    Object.assign(process.env, kept);
+    fresh();
+  }
+});
