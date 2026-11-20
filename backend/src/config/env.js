@@ -20,6 +20,12 @@ module.exports = {
     key: process.env.LEDGERTRACE_API_KEY || '',
     timeoutMs: Number(process.env.LEDGERTRACE_TIMEOUT_MS) || 15000,
   },
+  // eDOS: where its /api/cmdhub/* lives, and the key it expects from us.
+  edos: {
+    url: process.env.EDOS_API_URL || '',
+    key: process.env.EDOS_API_KEY || '',
+    timeoutMs: Number(process.env.EDOS_TIMEOUT_MS) || 15000,
+  },
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',

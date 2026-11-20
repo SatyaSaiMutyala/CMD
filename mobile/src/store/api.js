@@ -3,6 +3,7 @@ import { API_URL, REQUEST_TIMEOUT_MS } from '../config';
 import {
   detailFrom,
   historyFrom,
+  notificationsFrom,
   pendingFrom,
   sessionFrom,
 } from '../data/adapter';
@@ -62,6 +63,22 @@ const baseQuery = async (args, ctx, extra) => {
   };
 };
 
+// How many notifications are asked for at a time
+export const NOTIFICATIONS_PAGE = 20;
+
+// Applies `change` to the loaded notifications straight away; undone if the
+// request it belongs to fails
+const changeNotifications = async ({ dispatch, queryFulfilled }, change) => {
+  const patch = dispatch(
+    api.util.updateQueryData('getNotifications', undefined, change),
+  );
+  try {
+    await queryFulfilled;
+  } catch (e) {
+    patch.undo();
+  }
+};
+
 export const api = createApi({
   reducerPath: 'api',
   baseQuery,
@@ -82,10 +99,11 @@ export const api = createApi({
       transformResponse: data => data.user,
     }),
     changePassword: build.mutation({
-      query: ({ current, next }) => ({
+      // Only the new password: being signed in is enough
+      query: next => ({
         url: '/api/auth/change-password',
         method: 'POST',
-        body: { current, next },
+        body: { next },
       }),
       transformResponse: data => sessionFrom(data.token, data.user),
     }),
@@ -148,6 +166,85 @@ export const api = createApi({
       query: () => '/api/decisions?limit=200',
       transformResponse: historyFrom,
       providesTags: ['History'],
+    }),
+
+    /* ---- notifications ---- */
+    // What the hub announced (new approvals, reminders), newest first, a page
+    // at a time: { items, hasMore, unread }.
+    //   no argument      the first page (this replaces whatever was loaded)
+    //   an `at` value    the page after the item with that time, added on
+    // Every page lands in the same place in the store, so the screens always
+    // read one growing list.
+    getNotifications: build.query({
+      query: before =>
+        `/api/notifications?limit=${NOTIFICATIONS_PAGE}${
+          before ? `&before=${encodeURIComponent(before)}` : ''
+        }`,
+      transformResponse: notificationsFrom,
+      serializeQueryArgs: ({ endpointName }) => endpointName,
+      merge: (cache, page, { arg }) => {
+        if (!arg) return page;
+        const have = new Set(cache.items.map(n => n.id));
+        cache.items.push(...page.items.filter(n => !have.has(n.id)));
+        cache.hasMore = page.hasMore;
+        cache.unread = page.unread;
+        return undefined;
+      },
+      forceRefetch: ({ currentArg, previousArg }) => currentArg !== previousArg,
+    }),
+    // The three below change the list on screen at once and put it back if
+    // the server refuses.
+    readNotification: build.mutation({
+      query: id => ({
+        url: `/api/notifications/${encodeURIComponent(id)}/read`,
+        method: 'POST',
+        body: {},
+      }),
+      onQueryStarted: (id, ctx) =>
+        changeNotifications(ctx, list => {
+          const note = list.items.find(n => n.id === id);
+          if (note && !note.read) {
+            note.read = true;
+            list.unread = Math.max(list.unread - 1, 0);
+          }
+        }),
+    }),
+    readAllNotifications: build.mutation({
+      query: () => ({
+        url: '/api/notifications/read-all',
+        method: 'POST',
+        body: {},
+      }),
+      onQueryStarted: (arg, ctx) =>
+        changeNotifications(ctx, list => {
+          list.items.forEach(note => {
+            note.read = true;
+          });
+          list.unread = 0;
+        }),
+    }),
+    // "Delete" takes it out of the CMD's list (the server keeps the record)
+    deleteNotification: build.mutation({
+      query: id => ({
+        url: `/api/notifications/${encodeURIComponent(id)}`,
+        method: 'DELETE',
+      }),
+      onQueryStarted: (id, ctx) =>
+        changeNotifications(ctx, list => {
+          const at = list.items.findIndex(n => n.id === id);
+          if (at < 0) return;
+          if (!list.items[at].read) list.unread = Math.max(list.unread - 1, 0);
+          list.items.splice(at, 1);
+        }),
+    }),
+    deleteAllNotifications: build.mutation({
+      query: () => ({ url: '/api/notifications', method: 'DELETE' }),
+      onQueryStarted: (arg, ctx) =>
+        changeNotifications(ctx, list => {
+          list.items = [];
+          list.hasMore = false;
+          list.unread = 0;
+        }),
     }),
 
     /* ---- push notifications ---- */

@@ -3,6 +3,7 @@
  */
 
 import { AppRegistry } from 'react-native';
+import { enableFreeze } from 'react-native-screens';
 import {
   getMessaging,
   setBackgroundMessageHandler,
@@ -18,5 +19,10 @@ try {
 } catch (e) {
   /* push is optional: the app runs without it */
 }
+
+// A page that is not on screen (Home, while a software's list is open over
+// it) stops redrawing itself until it is shown again. Otherwise every change
+// in the app's data redraws all of them, visible or not.
+enableFreeze(true);
 
 AppRegistry.registerComponent(appName, () => App);

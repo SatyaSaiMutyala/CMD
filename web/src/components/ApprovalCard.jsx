@@ -7,8 +7,12 @@ import { ToneChip } from './bits.jsx'
 
 /* One item waiting for a decision, with Send back and Approve.
    `onReject` adds the Reject link (only some stages allow it);
-   `onDetails` adds the link to the full details and attached documents. */
-export default function ApprovalCard({ item, onApprove, onSendBack, onReject, onDetails }) {
+   `onDetails` adds the link to the full details and attached documents.
+   A software with no "send back" (eDOS) gives no `onSendBack`: Reject then
+   takes its place beside Approve. `rejectLabel` words that button. */
+export default function ApprovalCard({ item, onApprove, onSendBack, onReject, onDetails, rejectLabel }) {
+  // "Due in 2d" for a payment; "Sent 20 Nov" as it is; nothing when there is none
+  const due = !item.due ? '' : item.overdue || /^Sent /.test(item.due) ? item.due : `Due ${item.due}`
   return (
     <Paper
       variant="outlined"
@@ -17,9 +21,9 @@ export default function ApprovalCard({ item, onApprove, onSendBack, onReject, on
     >
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
         <Typography variant="mono" sx={{ fontWeight: 600, color: 'hub.info' }}>
-          {item.id}
+          {item.ref || item.id}
         </Typography>
-        <ToneChip tone={item.overdue ? 'bad' : 'neutral'}>{item.overdue ? item.due : `Due ${item.due}`}</ToneChip>
+        {due ? <ToneChip tone={item.overdue ? 'bad' : 'neutral'}>{due}</ToneChip> : null}
       </Stack>
 
       <Box>
@@ -80,16 +84,22 @@ export default function ApprovalCard({ item, onApprove, onSendBack, onReject, on
       ) : null}
 
       <Stack direction="row" spacing={1.25} sx={{ mt: onDetails ? 0 : 'auto', pt: 0.5 }}>
-        <Button variant="outlined" color="error" onClick={onSendBack} sx={{ flex: 1 }}>
-          Send back
-        </Button>
+        {onSendBack ? (
+          <Button variant="outlined" color="error" onClick={onSendBack} sx={{ flex: 1 }}>
+            Send back
+          </Button>
+        ) : onReject ? (
+          <Button variant="outlined" color="error" onClick={onReject} sx={{ flex: 1 }}>
+            {rejectLabel || 'Reject'}
+          </Button>
+        ) : null}
         <Button variant="contained" color="success" onClick={onApprove} sx={{ flex: 1.4, fontWeight: 600 }}>
           {item.approve}
         </Button>
       </Stack>
-      {onReject ? (
+      {onReject && onSendBack ? (
         <Button variant="text" color="error" size="small" onClick={onReject} sx={{ alignSelf: 'center' }}>
-          Reject and return to Registered
+          {rejectLabel || 'Reject and return to Registered'}
         </Button>
       ) : null}
     </Paper>

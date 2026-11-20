@@ -29,6 +29,8 @@ const fromLedgerTrace = (card) => {
   const approve = actions.find((a) => a.k === 'approve')
   return {
     id: card.code,
+    // What is shown as the item's reference (here, the same as its id)
+    ref: card.code,
     stage: card.stage,
     note: card.part_label || '',
     party: card.vendor,
@@ -44,10 +46,54 @@ const fromLedgerTrace = (card) => {
     overdue: card.due_state === 'over',
     approve: approve ? approve.label : 'Approve',
     canReject: actions.some((a) => a.k === 'reject'),
+    canSendBack: true,
   }
 }
 
-const MAPPERS = { ledgertrace: fromLedgerTrace }
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// "2026-11-20T10:00:00+05:30" -> "20 Nov"
+const shortDay = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''))
+  return m ? `${Number(m[3])} ${SHORT_MONTHS[Number(m[2]) - 1]}` : ''
+}
+const count = (n, one, many) => `${n} ${n === 1 ? one : many}`
+
+/* One eDOS request (a test to add, or an edit to a live one) -> one approval
+   item. There is no money to approve here, so the figure on the card is the
+   new test's MRP, or for an edit how many fields it changes. */
+const fromEdos = (card) => {
+  const create = card.action === 'create'
+  const headline = create ? card.mrp_text || 'New test' : count(card.change_count || 0, 'change', 'changes')
+  const sent = shortDay(card.at)
+  return {
+    // The request's own number is what eDOS is asked to decide; the test
+    // code is what a person recognises it by
+    id: String(card.id),
+    ref: card.code || `Request ${card.id}`,
+    stage: card.stage,
+    note: card.by ? `Requested by ${card.by}` : '',
+    party: card.name,
+    amount: headline,
+    balance: '',
+    decides: headline,
+    auto: card.note || '',
+    tags: [
+      create ? 'NEW TEST' : 'EDIT',
+      card.variants ? `+${count(card.variants, 'LOCATION', 'LOCATIONS')}` : '',
+      card.attachments ? count(card.attachments, 'FILE', 'FILES') : '',
+      card.missing_test ? 'TEST DELETED' : '',
+    ].filter(Boolean),
+    type: create ? 'New test' : 'Edit',
+    due: sent ? `Sent ${sent}` : '',
+    dueLong: sent ? `Sent ${sent}` : '',
+    overdue: false,
+    approve: 'Approve',
+    canReject: true,
+    canSendBack: false,
+  }
+}
+
+const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos }
 
 /** One software's pending answer ->
     { total, stages: { [key]: { count, valueText, items } } } */
@@ -114,12 +160,40 @@ const detailFromLedgerTrace = (inv) => {
   }
 }
 
-const DETAIL_MAPPERS = { ledgertrace: detailFromLedgerTrace }
+/* One eDOS request in full -> what the details view shows: every field it
+   sets (for an edit, what the catalogue holds now and what it would become),
+   why it was asked for, and its attached files */
+const detailFromEdos = (req) => {
+  const edit = req.action !== 'create'
+  return {
+    id: String(req.id),
+    ref: req.code || `Request ${req.id}`,
+    party: req.name,
+    stageName: req.stage_name,
+    factsTitle: edit ? 'What changes' : 'What it sets',
+    facts: (req.changes || []).map((c) => [c.field, edit ? `${c.from || '—'}  →  ${c.to || '—'}` : c.to]),
+    notes: [req.note, req.by ? `Requested by ${req.by}.` : ''].filter(Boolean).join('\n'),
+    documents: (req.documents || []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      group: d.group || '',
+      size: d.size || '',
+      source: d.source || '',
+    })),
+    documentsNote: '',
+    activity: [],
+    canSendBack: false,
+  }
+}
 
-/** One item's full answer -> { id, party, facts, notes, documents, activity } */
+const DETAIL_MAPPERS = { ledgertrace: detailFromLedgerTrace, edos: detailFromEdos }
+
+/** One item's full answer -> { id, party, facts, factsTitle?, notes, documents, activity }
+    Each source names the item differently in its answer. */
 export function detailFrom(swId, data) {
   const map = DETAIL_MAPPERS[swId]
-  return map && data && data.invoice ? map(data.invoice) : null
+  const item = data && (data.invoice || data.request)
+  return map && item ? map(item) : null
 }
 
 /** The saved decisions answer -> rows for the History tab, newest first */

@@ -24,5 +24,11 @@ export const vs = n => verticalScale((n * 680) / DESIGN_HEIGHT);
 export const ms = (n, factor = 0.5) => n + (s(n) - n) * factor;
 export const mvs = (n, factor = 0.5) => n + (vs(n) - n) * factor;
 
-export const gutter = s(16);
+// Text. The design's sizes read large on a real phone, so every font size is
+// drawn a little smaller than drawn there; change TEXT_SCALE to resize all
+// text in the app at once.
+const TEXT_SCALE = 0.88;
+export const fs = n => Math.round(ms(n) * TEXT_SCALE * 2) / 2;
+
+export const gutter = s(16); // side padding of a page
 export const hairline = 1.5; // card border width; not scaled

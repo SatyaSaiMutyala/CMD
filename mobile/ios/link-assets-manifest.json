@@ -2,8 +2,20 @@
   "migIndex": 1,
   "data": [
     {
+      "path": "src/assets/fonts/BricolageGrotesque-Bold.ttf",
+      "sha1": "ea5d69e24da79db36506e01789bd1983dded8919"
+    },
+    {
+      "path": "src/assets/fonts/BricolageGrotesque-ExtraBold.ttf",
+      "sha1": "4ca0afc10e517f9e32a05acfdce52637f767b296"
+    },
+    {
       "path": "src/assets/fonts/Inter-Bold.ttf",
       "sha1": "b7ab5dc5e8d605338223de7a8ffe3ebea409d3bc"
+    },
+    {
+      "path": "src/assets/fonts/Inter-ExtraBold.ttf",
+      "sha1": "3744a05c5f284a039db6f64dc36185293ad16952"
     },
     {
       "path": "src/assets/fonts/Inter-Medium.ttf",

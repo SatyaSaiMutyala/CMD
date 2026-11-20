@@ -25,11 +25,12 @@ export function openHome() {
   return true;
 }
 
-export function openSoftware(swId) {
+// view: 'list' (the default) or 'cards' (the swipe review)
+export function openSoftware(swId, view = 'list') {
   if (!navigationRef.isReady()) return false;
   navigationRef.navigate(ROUTES.approvals, {
     screen: ROUTES.software,
-    params: { swId },
+    params: { swId, view },
   });
   return true;
 }

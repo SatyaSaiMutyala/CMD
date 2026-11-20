@@ -1,22 +1,74 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Linking, Platform, StyleSheet, View } from 'react-native';
+import ChangePassword from '../components/account/ChangePassword';
 import {
   AppText,
   Button,
+  Card,
+  Disc,
   Eyebrow,
+  KeyboardAvoider,
   Pill,
+  Ring,
+  Screen,
   ScreenHeader,
   SettingRow,
-  Toggle,
-  Screen,
 } from '../components/common';
-import { PasswordModal } from '../components/overlays';
+import { Icon } from '../components/icons';
+import { ROUTES } from '../navigation/routes';
+import { available, openLegacySetup } from '../services/reminderSetup';
 import { useAuth } from '../store/AuthProvider';
 import { useHub } from '../store/HubProvider';
-import { colors, gutter, mvs, s } from '../theme';
+import { colors, ms, mvs, s } from '../theme';
+import { useReminderPermissions } from './ReminderSetupScreen';
 
-/* How the hub gets the user's attention, plus two "try it" actions */
-export default function AlertsScreen() {
+/* Android: how far the "reminder covers the whole screen" setup has got */
+function FullScreenCard({ onSetUp }) {
+  const { fullScreen, overApps } = useReminderPermissions();
+  const allowed = (fullScreen ? 1 : 0) + (overApps ? 1 : 0);
+  return (
+    <View style={styles.android}>
+      <Ring
+        size={130}
+        width={14}
+        color={colors.white}
+        opacity={0.7}
+        style={styles.androidRing}
+      />
+      <Eyebrow size={11.5} track={0.08} color={colors.ink}>
+        ANDROID
+      </Eyebrow>
+      <AppText display size={21} lh={1.15} weight={800} style={styles.androidTitle}>
+        Reminder covers the whole screen
+      </AppText>
+      {available ? (
+        <View style={styles.progress}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${allowed * 50}%` }]} />
+          </View>
+          <AppText size={12.5} weight={800}>
+            {allowed} of 2 allowed
+          </AppText>
+        </View>
+      ) : null}
+      <Button
+        variant="white"
+        height={46}
+        fontSize={14}
+        iconRight="arrowRight"
+        iconSize={16}
+        iconStroke={2.6}
+        label="Set up"
+        onPress={onSetUp}
+        style={styles.androidButton}
+      />
+    </View>
+  );
+}
+
+/* How the hub gets the CMD's attention, two "try it" buttons, and the account:
+   who is signed in, sign out, and changing the password */
+export default function AlertsScreen({ navigation }) {
   const {
     store,
     push,
@@ -27,118 +79,229 @@ export default function AlertsScreen() {
   } = useHub();
   const { settings } = store;
   const { user, logout } = useAuth();
-  const [passwordOpen, setPasswordOpen] = useState(false);
 
   return (
-    <Screen>
-      <ScreenHeader title="Alerts" sub="How the hub gets your attention" />
-      <View style={styles.list}>
-        <SettingRow
-          title="Sound on new approval"
-          text="A sound plays the moment a new approval arrives while the app is open."
-        >
-          <Toggle
+    <KeyboardAvoider style={styles.fill}>
+      <Screen
+        top={12}
+        backdrop={<Disc size={380} color={colors.yellowSoft} style={styles.disc} />}
+      >
+        <ScreenHeader
+          large
+          title="Alerts"
+          sub="How the hub gets your attention"
+          style={styles.title}
+        />
+
+        <View style={styles.pair}>
+          <SettingRow
+            icon="sound"
+            title="Sound on new approval"
+            text="Plays the moment one arrives while the app is open"
             value={!!settings.sound}
-            label="Chime on new approval"
             onChange={() => toggleSetting('sound')}
           />
-        </SettingRow>
-        <SettingRow
-          title="Reminder every 15 minutes"
-          text="Every 15 minutes this phone reminds you of what is pending, also when the app is closed. Skipped when nothing is pending."
-        >
-          <Toggle
+          <SettingRow
+            icon="clock"
+            title="Reminder every 15 min"
+            text="This phone only · skipped when nothing is pending"
             value={!!settings.hourly}
-            label="Reminder every 15 minutes"
             onChange={() => toggleSetting('hourly')}
           />
-        </SettingRow>
-        <SettingRow
-          title="Phone notifications"
-          text="Notifies you with sound when the app is closed or in the background."
-        >
+        </View>
+
+        <Card bg={colors.mint} pad={16} style={styles.push}>
+          <View style={styles.pushIcon}>
+            <Icon name="bell" size={21} stroke={2.2} />
+          </View>
+          <View style={styles.pushCopy}>
+            <AppText size={15} weight={800}>
+              Notifications
+            </AppText>
+            <AppText size={12.5} lh={1.4} color={colors.muted}>
+              {push === 'blocked'
+                ? 'Blocked for this app. Allow them in the phone settings.'
+                : 'This phone can alert you when the app is closed'}
+            </AppText>
+          </View>
           {push === 'on' ? (
-            <Pill tone="ok" label="On" />
-          ) : push === 'blocked' ? (
-            <Pill tone="bad" label="Blocked" />
+            <Pill
+              label="On"
+              icon="check"
+              iconStroke={3}
+              height={30}
+              pad={12}
+              size={12.5}
+              bg={colors.teal}
+              color={colors.white}
+              style={styles.center}
+            />
           ) : (
-            <Button size="mini" label="Turn on" onPress={enablePush} />
+            <Button
+              variant="yellow"
+              height={38}
+              fontSize={12.5}
+              label={push === 'blocked' ? 'Settings' : 'Turn on'}
+              onPress={
+                push === 'blocked'
+                  ? () => Linking.openSettings().catch(() => {})
+                  : enablePush
+              }
+              style={styles.pushButton}
+            />
           )}
-        </SettingRow>
-        <AppText size={12.5} lh={1.5} color={colors.muted} style={styles.hint}>
-          {push === 'blocked'
-            ? 'Notifications are blocked for this app. Allow them in the phone settings: Settings → Notifications → CMD Approval Hub.'
-            : 'With notifications on, new approvals and the 15-minute reminder reach you even when the app is closed.'}
-        </AppText>
+        </Card>
 
         {Platform.OS === 'android' ? (
-          <SettingRow
-            title="Reminder covers the whole screen"
-            text="Lets the 15-minute reminder open over the lock screen and over other apps. Needs two permissions."
-          >
-            <Button
-              size="mini"
-              variant="ghost"
-              label="Set up"
-              onPress={() =>
-                Linking.sendIntent('com.app.approvalhub.REMINDER_SETUP').catch(
-                  () => {},
-                )
-              }
-            />
-          </SettingRow>
+          <FullScreenCard
+            onSetUp={() =>
+              available
+                ? navigation.navigate(ROUTES.reminderSetup)
+                : openLegacySetup()
+            }
+          />
         ) : null}
 
-        <Eyebrow style={styles.tryIt}>TRY IT</Eyebrow>
-        <SettingRow
-          title="Preview a new-approval alert"
-          text="Shows the banner a real arrival shows. Nothing is changed."
-        >
-          <Button size="mini" label="Preview" onPress={previewArrival} />
-        </SettingRow>
-        <SettingRow
-          title="Preview the reminder"
-          text="Shows the full-screen reminder now."
-        >
-          <Button
-            size="mini"
-            variant="ghost"
-            label="Preview"
-            onPress={previewReminder}
-          />
-        </SettingRow>
+        <View style={styles.block}>
+          <View style={styles.blockHead}>
+            <AppText display size={19} weight={800} accessibilityRole="header">
+              Try it
+            </AppText>
+            <AppText size={12.5} weight={600} color={colors.muted}>
+              Changes no data
+            </AppText>
+          </View>
+          <View style={styles.tryRow}>
+            <Button
+              variant="outline"
+              height={54}
+              fontSize={13.5}
+              icon="play"
+              iconSize={17}
+              label="New-approval alert"
+              onPress={previewArrival}
+              style={styles.try}
+            />
+            <Button
+              variant="outline"
+              height={54}
+              fontSize={13.5}
+              icon="play"
+              iconSize={17}
+              label="Reminder"
+              onPress={previewReminder}
+              style={styles.try}
+            />
+          </View>
+        </View>
 
-        <Eyebrow style={styles.tryIt}>ACCOUNT</Eyebrow>
-        <SettingRow title={user.name} text={user.email}>
+        <Card style={styles.account}>
+          <View style={styles.who}>
+            <View style={styles.avatarHalo}>
+              <View style={styles.avatar}>
+                <AppText display size={16} weight={800}>
+                  CMD
+                </AppText>
+              </View>
+            </View>
+            <View style={styles.whoCopy}>
+              <AppText size={17} weight={800} numberOfLines={1}>
+                {user.name}
+              </AppText>
+              <AppText size={13} weight={600} color={colors.muted} numberOfLines={1}>
+                {user.role}
+              </AppText>
+              <AppText size={13} color={colors.muted} numberOfLines={1}>
+                {user.email}
+              </AppText>
+            </View>
+          </View>
           <Button
-            size="mini"
-            variant="dangerOutline"
+            variant="outline"
+            height={50}
+            fontSize={14.5}
+            icon="signOut"
+            iconStroke={2.2}
             label="Sign out"
             onPress={logout}
           />
-        </SettingRow>
-        <SettingRow
-          title="Password"
-          text="Change the password you sign in with."
-        >
-          <Button
-            size="mini"
-            variant="ghost"
-            label="Change"
-            onPress={() => setPasswordOpen(true)}
-          />
-        </SettingRow>
-      </View>
-      <PasswordModal
-        visible={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
-      />
-    </Screen>
+        </Card>
+
+        <ChangePassword />
+      </Screen>
+    </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { gap: mvs(14), paddingHorizontal: gutter, paddingTop: mvs(16) },
-  hint: { paddingVertical: mvs(2), paddingHorizontal: s(4) },
-  tryIt: { marginTop: mvs(10) },
+  fill: { flex: 1 },
+  center: { alignSelf: 'center' },
+  disc: { right: -s(150), top: -ms(170) },
+  title: { paddingBottom: mvs(6) },
+  pair: { flexDirection: 'row', gap: s(12) },
+
+  push: { flexDirection: 'row', alignItems: 'center', gap: s(14) },
+  pushIcon: {
+    width: ms(46),
+    height: ms(46),
+    borderRadius: ms(23),
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pushCopy: { flex: 1, gap: 2 },
+  pushButton: { paddingHorizontal: s(14) },
+
+  android: {
+    overflow: 'hidden',
+    backgroundColor: colors.yellow,
+    borderRadius: ms(28),
+    padding: s(18),
+    gap: mvs(12),
+  },
+  androidRing: { right: -ms(30), top: -ms(30) },
+  androidTitle: { maxWidth: s(250) },
+  androidButton: { alignSelf: 'flex-start', paddingHorizontal: s(20) },
+  progress: { flexDirection: 'row', alignItems: 'center', gap: s(10) },
+  progressTrack: {
+    flex: 1,
+    height: ms(8),
+    borderRadius: ms(4),
+    backgroundColor: colors.white,
+    overflow: 'hidden',
+  },
+  progressFill: { height: ms(8), backgroundColor: colors.teal },
+
+  block: { gap: mvs(10) },
+  blockHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingTop: mvs(4),
+    paddingHorizontal: s(4),
+  },
+  tryRow: { flexDirection: 'row', gap: s(10) },
+  try: { flex: 1, paddingHorizontal: s(8), gap: s(7) },
+
+  account: { gap: mvs(14) },
+  who: { flexDirection: 'row', alignItems: 'center', gap: s(14) },
+  avatarHalo: {
+    width: ms(68),
+    height: ms(68),
+    borderRadius: ms(34),
+    backgroundColor: colors.yellowSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: -ms(5),
+    marginRight: 0,
+  },
+  avatar: {
+    width: ms(58),
+    height: ms(58),
+    borderRadius: ms(29),
+    backgroundColor: colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whoCopy: { flex: 1, minWidth: 0, gap: 2 },
 });

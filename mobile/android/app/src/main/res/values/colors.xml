@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tint of the hub's notification icon (the app's brand green).
+    <!-- Tint of the hub's notification icon (the app's brand teal).
          Referenced from firebase.json. -->
-    <color name="notification_brand">#22A991</color>
+    <color name="notification_brand">#27B198</color>
+    <!-- Behind the app while it starts: the same teal as the opening screen -->
+    <color name="launch_background">#27B198</color>
 </resources>

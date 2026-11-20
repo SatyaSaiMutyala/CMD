@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { TextInput } from 'react-native';
+import { AccessibilityInfo, TextInput } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import App from '../App';
 import { api } from '../src/store/api';
@@ -72,6 +72,12 @@ jest.mock('../src/store/store', () => {
 
 const { act } = ReactTestRenderer;
 
+// Several tests go through whole screens, each with a slide that takes real
+// time. On a busy computer (a native build running alongside) that can pass
+// Jest's five seconds, and a test that times out carries on in the background
+// and upsets the ones after it.
+jest.setTimeout(30000);
+
 /* What LedgerTrace's pending list looks like once it has passed through the hub backend */
 const card = more => ({
   code: 'INS-2026-1140',
@@ -139,9 +145,9 @@ const respond = (path, body) => {
   }
   if (path === '/api/auth/me') return answer(200, { user: USER });
   if (path === '/api/auth/change-password') {
-    return body.current === 'right-password'
+    return String(body.next || '').length >= 8
       ? answer(200, { token: 'jwt-2', user: USER })
-      : answer(400, { message: 'Your current password is not right.' });
+      : answer(400, { message: 'Use at least 8 characters.' });
   }
   if (path.startsWith('/api/decisions')) {
     return answer(200, {
@@ -219,6 +225,9 @@ const respond = (path, body) => {
   return answer(200, { ok: true, moved: ['INS-2026-1140'], skipped: [] });
 };
 beforeEach(() => {
+  // The slide-to-confirm knob cannot be dragged in a test. With a screen
+  // reader on it can be activated instead, which is what `slide` below does.
+  jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
   calls.length = 0;
   global.fetch = jest.fn(async (input, init) => {
     const request =
@@ -276,10 +285,8 @@ const signIn = async (app, email, password) => {
     emailInput.props.onChangeText(email);
     passwordInput.props.onChangeText(password);
   });
-  await act(async () => {
-    app.root.findByProps({ label: 'Sign In' }).props.onPress();
-  });
-  await settle();
+  // The sign-in bar is slid, not tapped
+  await slide(app);
 };
 
 // A store that is already signed in, for testing the data layer on its own
@@ -291,7 +298,8 @@ const signedInStore = () => {
 
 test('starts on the login screen and rejects a bad form or a wrong password', async () => {
   const app = await start();
-  expect(textOf(app.toJSON())).toContain('Sign In');
+  expect(textOf(app.toJSON())).toContain('Slide to sign in');
+  expect(textOf(app.toJSON())).toContain('Authorized access only');
   expect(textOf(app.toJSON())).not.toContain('LedgerTrace');
 
   await signIn(app, '', '');
@@ -312,10 +320,14 @@ test('signing in opens the hub with the live pending total from the server', asy
   await signIn(app, 'cmd@example.com', 'right-password');
 
   const text = textOf(app.toJSON());
-  expect(text).toContain('CMD Approval Hub');
+  expect(text).toContain('Venkata');
+  expect(text).toContain('WAITING FOR YOU');
+  expect(text).toContain('2pending');
+  expect(text).toContain('Start swipe review');
   expect(text).toContain('LedgerTrace');
+  expect(text).toContain('2/8Systems connected');
+  expect(text).toContain('eDOS');
   expect(text).toContain('CAXIS');
-  expect(text).toContain('2items need');
 
   const list = calls.find(c => c.path === '/api/software/ledgertrace/pending');
   expect(list.auth).toBe('Bearer jwt-1');
@@ -333,10 +345,119 @@ test('signing in opens the hub with the live pending total from the server', asy
 test('the session is remembered: the next start opens the hub without signing in', async () => {
   const app = await start();
   const text = textOf(app.toJSON());
-  expect(text).toContain('CMD Approval Hub');
-  expect(text).toContain('2items need');
+  expect(text).toContain('WAITING FOR YOU');
+  expect(text).toContain('2pending');
   expect(calls.some(c => c.path === '/api/auth/me')).toBe(true);
   expect(calls.some(c => c.path === '/api/auth/login')).toBe(false);
+  await act(async () => app.unmount());
+});
+
+// A page that has just been opened shimmers while its list is fetched: this
+// waits for the real cards
+const opened = () =>
+  act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 700));
+  });
+
+// Presses the first thing on screen that carries this accessibility label
+const press = async (app, label) => {
+  await act(async () => {
+    app.root.findAllByProps({ accessibilityLabel: label })[0].props.onPress();
+  });
+  await settle();
+};
+
+// What a screen reader does in place of sliding the knob to the end (the
+// slider on top: the home page, with its own, stays mounted underneath)
+const slide = async app => {
+  await act(async () => {
+    app.root
+      .findAll(node => typeof node.props.onAccessibilityAction === 'function')
+      .at(-1)
+      .props.onAccessibilityAction({ nativeEvent: { actionName: 'activate' } });
+  });
+  // The knob glides to the end before the decision is sent
+  await act(async () => {
+    await new Promise(resolve => setTimeout(resolve, 600));
+  });
+  await settle();
+};
+
+test('the swipe review: approve opens the sheet, and only the slide sends it', async () => {
+  const app = await start();
+  // The bar on the home card is slid, not tapped
+  await slide(app);
+  await opened();
+
+  // The first stage with something waiting, one card at a time
+  let text = textOf(app.toJSON());
+  expect(text).toContain('Swipe right to approve · left to send back');
+  expect(text).toContain('LT · Pay Approval');
+  expect(text).toContain('TRANSASIA BIO-MEDICALS LTD');
+  expect(text).toContain('AMOUNT TO APPROVE');
+  expect(text).toContain('1 of 2');
+
+  await press(app, 'Approve');
+  text = textOf(app.toJSON());
+  expect(text).toContain('APPROVE PAYMENT');
+  expect(text).toContain('NEXT STAGE');
+  expect(text).toContain('Payment Release');
+  expect(text).toContain('Slide to approve ₹7,662');
+  // Opening the sheet sends nothing
+  expect(calls.some(c => c.method === 'POST' && /approve/.test(c.path))).toBe(
+    false,
+  );
+
+  await slide(app);
+  expect(
+    calls.find(
+      c => c.path === '/api/software/ledgertrace/items/INS-2026-1140/approve',
+    ),
+  ).toMatchObject({ method: 'POST', body: { stage: 6 }, auth: 'Bearer jwt-1' });
+  text = textOf(app.toJSON());
+  expect(text).toContain('Approved');
+  expect(text).toContain(
+    'INS-2026-1140 moved to Payment Release. Logged against your name.',
+  );
+  expect(text).toContain('Next approval');
+  await act(async () => app.unmount());
+});
+
+test('the list view: every item of the stage, move all, and a send-back with its reason', async () => {
+  const app = await start();
+  await press(app, 'Open LedgerTrace, 2 pending');
+  await opened();
+
+  let text = textOf(app.toJSON());
+  expect(text).toContain('Move all 2 to Payment Release');
+  expect(text).toContain('Swipe a row → approve · ← send back');
+  expect(text).toContain('ARKA BIO SOLUTIONS');
+  expect(text).toContain('4d overdue');
+  expect(text).toContain('Balance of a ₹62,559 invoice');
+
+  await press(app, 'Send back INS-2026-1140');
+  text = textOf(app.toJSON());
+  expect(text).toContain('SEND BACK');
+  expect(text).toContain('Release Queue');
+  expect(text).toContain('Slide to send back');
+  await act(async () => {
+    app.root
+      .findByProps({ accessibilityLabel: 'Reason for sending back · optional' })
+      .props.onChangeText('Hold till month end');
+  });
+  await slide(app);
+  expect(
+    calls.find(
+      c => c.path === '/api/software/ledgertrace/items/INS-2026-1140/sendback',
+    ),
+  ).toMatchObject({
+    method: 'POST',
+    body: { stage: 6, reason: 'Hold till month end' },
+  });
+  // Back on the list, with what happened said above it
+  text = textOf(app.toJSON());
+  expect(text).toContain('Sent back INS-2026-1140. Returned to Release Queue.');
+  expect(text).not.toContain('Slide to send back');
   await act(async () => app.unmount());
 });
 
@@ -358,19 +479,16 @@ test('history comes from the server, with the software named', async () => {
   ]);
 });
 
-test('changing the password sends both, and a wrong current one is reported', async () => {
+test('changing the password sends only the new one, and a refusal is reported', async () => {
   const store = signedInStore();
-  await expect(
-    store.dispatch(changePassword('wrong', 'new-password-1')),
-  ).rejects.toThrow('Your current password is not right.');
+  await expect(store.dispatch(changePassword('short'))).rejects.toThrow(
+    'Use at least 8 characters.',
+  );
   expect(store.getState().auth.session.token).toBe('jwt-1');
 
-  await store.dispatch(changePassword('right-password', 'new-password-1'));
+  await store.dispatch(changePassword('new-password-1'));
   expect(store.getState().auth.session.token).toBe('jwt-2');
-  expect(calls.at(-1).body).toEqual({
-    current: 'right-password',
-    next: 'new-password-1',
-  });
+  expect(calls.at(-1).body).toEqual({ next: 'new-password-1' });
 });
 
 test('a LedgerTrace card becomes an approval item the screens can show', async () => {
@@ -405,6 +523,85 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
     tags: ['NO TDS', 'ADVANCE'],
     dueLong: '4 days overdue',
     overdue: true,
+  });
+});
+
+test('an eDOS request becomes an approval item: approve or reject, no send back', async () => {
+  const { pendingFrom, detailFrom } = require('../src/data/adapter');
+  const card = {
+    id: 41,
+    stage: 1,
+    code: 'PR781',
+    name: 'Culture and Sensitivity (Aerobic)',
+    action: 'create',
+    note: 'Addition of sample type Pus Swab.',
+    by: 'Asha',
+    at: '2026-11-20T10:00:00+05:30',
+    mrp_text: '₹1,100',
+    change_count: 3,
+    variants: 2,
+    attachments: 1,
+    missing_test: false,
+  };
+  const data = pendingFrom('edos', {
+    pending: { req: 2, total: 2 },
+    stages: [
+      {
+        key: 'req',
+        count: 2,
+        items: [
+          card,
+          { ...card, id: 42, code: 'BC900', action: 'update', mrp_text: '' },
+        ],
+      },
+    ],
+  });
+  expect(data.total).toBe(2);
+  const [added, edited] = data.stages.req.items;
+  expect(added).toMatchObject({
+    // eDOS is asked to decide request 41; people know it as PR781
+    id: '41',
+    ref: 'PR781',
+    stage: 1,
+    party: 'Culture and Sensitivity (Aerobic)',
+    decides: '₹1,100',
+    eyebrow: 'NEW TEST · MRP',
+    note: 'Requested by Asha',
+    auto: 'Addition of sample type Pus Swab.',
+    tags: ['NEW TEST', '+2 LOCATIONS', '1 FILE'],
+    type: 'New test',
+    due: 'Sent 20 Nov',
+    canReject: true,
+    canSendBack: false,
+    plainSlide: true,
+  });
+  // An edit has no price of its own: what matters is how much it changes
+  expect(edited).toMatchObject({
+    id: '42',
+    decides: '3 changes',
+    eyebrow: 'EDIT TO A LIVE TEST',
+    type: 'Edit',
+  });
+
+  const detail = detailFrom('edos', {
+    ok: true,
+    request: {
+      ...card,
+      action: 'update',
+      stage_name: 'Test Approval',
+      changes: [{ field: 'MRP', from: '₹900', to: '₹1,100' }],
+      documents: [
+        { id: 'a-7', name: 'method.pdf', group: 'Method sheet', size: '2 KB', source: 'eDOS' },
+      ],
+    },
+  });
+  expect(detail).toMatchObject({
+    id: '41',
+    party: 'Culture and Sensitivity (Aerobic)',
+    factsTitle: 'What changes',
+    facts: [['MRP', '₹900  →  ₹1,100']],
+    notes: 'Addition of sample type Pus Swab.\nRequested by Asha.',
+    documents: [{ id: 'a-7', name: 'method.pdf', group: 'Method sheet' }],
   });
 });
 
@@ -534,4 +731,49 @@ test('a token the server no longer accepts signs the app out', async () => {
   );
   await store.dispatch(api.endpoints.getPending.initiate('ledgertrace'));
   expect(store.getState().auth.session).toBeNull();
+});
+
+test('the app knows its own version: appVersion.js follows build.gradle', () => {
+  // Gradle rewrites the file before every Android build (scripts/sync-version.js);
+  // this catches a stale copy in the repository
+  const fs = require('fs');
+  const path = require('path');
+  const gradle = fs.readFileSync(
+    path.join(__dirname, '../android/app/build.gradle'),
+    'utf8',
+  );
+  const v = require('../src/update/appVersion');
+  expect(v.APP_VERSION).toBe(gradle.match(/versionName\s+"([^"]+)"/)[1]);
+  expect(v.ANDROID_PACKAGE_ID).toBe(
+    gradle.match(/applicationId\s+"([^"]+)"/)[1],
+  );
+});
+
+test('the version live on Google Play is read from either page layout, or not at all', async () => {
+  const { fetchPlayStoreVersion } = require('../src/update/playStoreVersion');
+  const page = (body, ok = true) =>
+    jest.fn(async () => ({ ok, text: async () => body }));
+
+  global.fetch = page('xx[[["1.0.4"]],[[[33]]]]yy');
+  await expect(fetchPlayStoreVersion()).resolves.toBe('1.0.4');
+  expect(global.fetch.mock.calls[0][0]).toContain('id=com.app.approvalhub');
+
+  global.fetch = page('<div>Current Version</div><span class="x">2.3.1</span>');
+  await expect(fetchPlayStoreVersion()).resolves.toBe('2.3.1');
+
+  // A redesigned page, or the app not published yet: no answer, so no block
+  global.fetch = page('<html>nothing useful</html>');
+  await expect(fetchPlayStoreVersion()).resolves.toBeNull();
+  global.fetch = page('not found', false);
+  await expect(fetchPlayStoreVersion()).resolves.toBeNull();
+});
+
+test('version numbers compare part by part, as numbers', () => {
+  const { isNewer } = require('../src/update/useForceUpdate');
+  expect(isNewer('1.10', '1.9')).toBe(true);
+  expect(isNewer('1.0.1', '1.0')).toBe(true);
+  expect(isNewer('2.0', '1.9.9')).toBe(true);
+  expect(isNewer('1.0', '1.0')).toBe(false);
+  expect(isNewer('1.0', '1.0.0')).toBe(false);
+  expect(isNewer('1.9', '1.10')).toBe(false);
 });

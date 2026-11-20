@@ -95,8 +95,10 @@ router.post('/:software/items/:code/:action', forward(async (req) => {
   });
   await remember(req.connector.id, data);
   await record(req, [{
-    ref: data.invoice || code,
-    party: data.vendor || '',
+    // What the source calls the item and who or what it is about (the
+    // names differ: LedgerTrace says invoice / vendor, eDOS says ref / party)
+    ref: data.ref || data.invoice || code,
+    party: data.party || data.vendor || '',
     amount: data.amount_text || '',
     // Approving at the release stage is releasing the payment
     verb: action === 'approve' && data.from && data.from.key === 'rel' ? 'Released' : VERBS[action],
@@ -110,6 +112,11 @@ router.post('/:software/items/:code/:action', forward(async (req) => {
 }));
 
 router.post('/:software/stages/:stage/approve-all', forward(async (req) => {
+  if (!req.connector.approveAll) {
+    const err = new Error('That software decides one item at a time.');
+    err.status = 400;
+    throw err;
+  }
   const codes = Array.isArray(req.body?.codes) ? req.body.codes.map(String) : undefined;
   const data = await req.connector.approveAll(req.params.stage, { codes, by: req.user.name });
   await remember(req.connector.id, data);

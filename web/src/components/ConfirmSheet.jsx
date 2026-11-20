@@ -32,7 +32,7 @@ const KINDS = {
     eyebrow: (stage.approveTitle || 'Approve').toLowerCase().replace(/^./, (c) => c.toUpperCase()),
     toLabel: 'Next stage',
     to: stage.next || 'Next stage',
-    fine: `Your decision is sent to ${sw.name} and logged against your name.`,
+    fine: stage.approveFine || `Your decision is sent to ${sw.name} and logged against your name.`,
     confirmLabel: stage.confirm || 'Confirm approval',
     confirmColor: 'success',
     reason: null,
@@ -46,11 +46,13 @@ const KINDS = {
     confirmColor: 'error',
     reason: { label: 'Reason (optional)', required: false },
   }),
-  reject: () => ({
-    eyebrow: 'Reject',
+  reject: (stage) => ({
+    eyebrow: stage.rejectTitle || 'Reject',
     toLabel: 'Returns to',
-    to: 'Registered',
-    fine: 'The item goes all the way back to the desk that registered it, with your reason shown to them. It is logged against your name.',
+    to: stage.rejectTo || 'Registered',
+    fine:
+      stage.rejectFine ||
+      'The item goes all the way back to the desk that registered it, with your reason shown to them. It is logged against your name.',
     confirmLabel: 'Confirm rejection',
     confirmColor: 'error',
     reason: { label: 'Reason for rejection', required: true },
@@ -91,9 +93,10 @@ function Sheet() {
     headline = item.decides || item.balance || item.amount
     line = item.party
     facts = [
-      ['Reference', item.id],
+      ['Reference', item.ref || item.id],
       ['Type', item.type || ''],
-      ['Due', item.dueLong || item.due],
+      // "Sent 20 Nov" (eDOS) says when it was asked for, not when it is due
+      /^Sent /.test(item.due || '') ? ['Sent', item.due.replace(/^Sent /, '')] : ['Due', item.dueLong || item.due],
       [kind.toLabel, kind.to],
     ]
     fine = kind.fine

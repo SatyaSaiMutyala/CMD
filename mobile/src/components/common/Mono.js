@@ -1,40 +1,39 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { colors, ms } from '../../theme';
 import AppText from './AppText';
 
-/* Two-letter software monogram. `inverted` is the white version used on brand-coloured headers. */
+/* The two-letter mark of a software ("LT") on a rounded tile */
 export default function Mono({
   label,
-  size = 44,
-  radius = 12,
-  fontSize = 15,
-  inverted,
+  size = 48,
+  radius = 16,
+  bg = colors.teal,
+  color = colors.white,
+  fontSize = 17,
+  display = true,
+  style,
+  children,
 }) {
   const px = ms(size);
   return (
     <View
       style={[
-        styles.box,
         {
           width: px,
           height: px,
           borderRadius: ms(radius),
-          backgroundColor: inverted ? colors.onBrand : colors.brand,
+          backgroundColor: bg,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
+        style,
       ]}
     >
-      <AppText
-        display
-        size={fontSize}
-        color={inverted ? colors.brandDark : colors.onBrand}
-      >
+      <AppText display={display} size={fontSize} weight={800} color={color}>
         {label}
       </AppText>
+      {children}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  box: { alignItems: 'center', justifyContent: 'center' },
-});

@@ -4,13 +4,15 @@
    What is actually waiting — counts and items — comes live from the hub
    backend through data/adapter.js.
 
-   A stage's `key` is the one the source project uses for it. */
+   A stage's `key` is the one the source project uses for it. The optional
+   wording fields on a stage (approveFine, rejectTitle, rejectTo, …) replace
+   the app's default sentences where a software's own words fit better. */
 export const REGISTRY = [
   {
     id: 'ledgertrace',
     mono: 'LT',
     name: 'LedgerTrace',
-    sub: 'Procure-to-pay · Accounts payable',
+    sub: 'Procure-to-pay, accounts payable',
     connected: true,
     stages: [
       {
@@ -24,6 +26,8 @@ export const REGISTRY = [
         approveTitle: 'APPROVE INVOICE',
         confirm: 'Confirm approval',
         bulk: 'Move all {n} to Tally Entry',
+        bulkTitle: 'Approve all {n} invoices',
+        bulkSlide: 'Slide to approve all {n}',
       },
       {
         key: 'pay',
@@ -36,6 +40,8 @@ export const REGISTRY = [
         approveTitle: 'APPROVE PAYMENT',
         confirm: 'Confirm approval',
         bulk: 'Move all {n} to Payment Release',
+        bulkTitle: 'Approve all {n} payments',
+        bulkSlide: 'Slide to approve all {n}',
       },
       {
         key: 'rel',
@@ -48,6 +54,36 @@ export const REGISTRY = [
         approveTitle: 'RELEASE PAYMENT',
         confirm: 'Confirm release',
         bulk: 'Release all {n} payments',
+        bulkTitle: 'Release all {n} payments',
+        bulkSlide: 'Slide to release all {n}',
+      },
+    ],
+  },
+  {
+    id: 'edos',
+    mono: 'ED',
+    name: 'eDOS',
+    sub: 'Directory of services, test catalogue',
+    connected: true,
+    // eDOS decides a request one way or the other: approve or reject. It has
+    // no "send back" and no "move all" (so the stage has no `back` or `bulk`).
+    stages: [
+      {
+        key: 'req',
+        stage: 1,
+        label: 'Test Approval',
+        short: 'Requests',
+        done: 'Test approval is clear',
+        next: 'the live catalogue',
+        approveTitle: 'APPROVE TEST CHANGE',
+        approveFine:
+          'Writes this change to the live test catalogue at once. Logged against your name.',
+        approveDone: 'It is live in the catalogue.',
+        rejectTitle: 'REJECT TEST CHANGE',
+        rejectTo: 'The requester',
+        rejectFine:
+          'Leaves the catalogue as it is. The person who asked for the change sees your reason. Logged against your name.',
+        rejectDone: 'The catalogue is unchanged.',
       },
     ],
   },
@@ -71,6 +107,7 @@ export const REGISTRY = [
     name: 'TAMS',
     sub: 'Asset management',
     planned: ['Asset capitalisation', 'Disposal and write-off'],
+    plannedIcons: ['box', 'trash'],
   },
   {
     id: 'truflow',

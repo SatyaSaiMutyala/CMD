@@ -1,24 +1,43 @@
 import React, { useRef, useState } from 'react';
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Image, StatusBar, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   AppText,
-  Button,
   KeyboardAvoider,
+  KeyboardScroll,
+  Ring,
+  SlideToConfirm,
   TextField,
 } from '../components/common';
-import { LockIcon, UserIcon } from '../components/icons';
+import { Icon } from '../components/icons';
 import { useAuth } from '../store/AuthProvider';
-import { colors, hairline, ms, mvs, s } from '../theme';
+import { colors, ms, mvs, s, shadows } from '../theme';
 
 const logo = require('../assets/images/trustlab-logo.png');
 
-/* Sign-in: brand header with the Trustlab mark, and the form on a white card */
+/* The picture on the teal panel: an approval card with its yellow tick */
+function CardArt() {
+  return (
+    <>
+      <View style={styles.artBack} />
+      <View style={styles.artCard}>
+        <View style={[styles.artBar, { width: ms(80), backgroundColor: colors.mintMid }]} />
+        <AppText display size={28} weight={800}>
+          ₹79,414
+        </AppText>
+        <View style={styles.artRow}>
+          <View style={[styles.artBar, { width: ms(100), backgroundColor: colors.mint }]} />
+          <View style={styles.artTick}>
+            <Icon name="check" size={18} stroke={3} />
+          </View>
+        </View>
+      </View>
+    </>
+  );
+}
+
+/* Sign-in: the teal panel with the Trustlab mark and the app's name, then the
+   email and password fields and the yellow slide-to-sign-in bar */
 export default function LoginScreen() {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
@@ -27,10 +46,13 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  // Changing this sends the slide knob back to its start
+  const [attempt, setAttempt] = useState(0);
 
   const submit = async () => {
     if (!email.trim() || !password) {
       setError('Enter your email and password.');
+      setAttempt(n => n + 1);
       return;
     }
     setBusy(true);
@@ -40,50 +62,60 @@ export default function LoginScreen() {
     } catch (e) {
       setError(e.message || 'Could not sign in. Try again.');
       setBusy(false);
+      setAttempt(n => n + 1);
     }
   };
 
   return (
-    <KeyboardAvoider
-      style={styles.screen}
-    >
-      <ScrollView
-        bounces={false}
-        overScrollMode="never"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-      >
-        <View style={[styles.brand, { paddingTop: mvs(36) + insets.top }]}>
-          <View style={styles.logoTile}>
-            <Image source={logo} style={styles.logo} resizeMode="contain" />
+    <KeyboardAvoider style={styles.screen}>
+      <StatusBar barStyle="light-content" />
+      {/* Room is left under the field in use for the slide-to-sign-in bar */}
+      <KeyboardScroll clear={150} contentContainerStyle={styles.content}>
+        <View style={[styles.panel, { height: ms(310) + insets.top }]}>
+          <Ring
+            size={296}
+            color={colors.white}
+            opacity={0.35}
+            style={styles.ringThin}
+          />
+          <Ring size={146} width={22} color={colors.yellow} style={styles.ringThick} />
+          <View style={[styles.logo, { top: insets.top + mvs(10) }]}>
+            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
           </View>
-          <AppText display size={26} color={colors.onBrand} align="center">
-            CMD Approval Hub
-          </AppText>
-          <AppText
-            size={13}
-            lh={1.5}
-            color={colors.onBrandSoft}
-            align="center"
-            style={styles.tagline}
-          >
-            One inbox for every CMD-level approval across Trustlab software.
-          </AppText>
+          <View style={[styles.art, { top: insets.top }]}>
+            <CardArt />
+          </View>
+          <View style={styles.name}>
+            <AppText
+              display
+              size={40}
+              lh={1}
+              weight={800}
+              track={-0.02}
+              color={colors.white}
+              accessibilityRole="header"
+            >
+              CMD{'\n'}Approval Hub
+            </AppText>
+            <AppText
+              size={14.5}
+              lh={1.4}
+              weight={600}
+              color={colors.white}
+              style={styles.tagline}
+            >
+              One inbox for every CMD-level approval.
+            </AppText>
+          </View>
         </View>
 
-        <View style={[styles.card, { marginBottom: mvs(24) + insets.bottom }]}>
-          <AppText display size={24} accessibilityRole="header">
-            Sign In
-          </AppText>
-          <AppText size={13} color={colors.muted} style={styles.help}>
-            Use the email and password your admin gave you.
-          </AppText>
-
+        <View style={styles.form}>
           <TextField
             label="Email"
-            icon={UserIcon}
+            icon="mail"
             value={email}
             onChangeText={setEmail}
+            placeholder="Enter your email address"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -91,13 +123,13 @@ export default function LoginScreen() {
             textContentType="username"
             returnKeyType="next"
             onSubmitEditing={() => passwordRef.current?.focus()}
-            style={styles.field}
           />
           <TextField
             ref={passwordRef}
             label="Password"
-            icon={LockIcon}
+            icon="lock"
             secure
+            placeholder="Enter your password"
             value={password}
             onChangeText={setPassword}
             autoCapitalize="none"
@@ -106,88 +138,138 @@ export default function LoginScreen() {
             textContentType="password"
             returnKeyType="go"
             onSubmitEditing={submit}
-            style={styles.field}
           />
 
           {error ? (
             <View accessibilityRole="alert" style={styles.error}>
-              <AppText size={13} color={colors.badTintText}>
+              <View style={styles.errorMark}>
+                <Icon name="alertBare" size={14} stroke={2.8} />
+              </View>
+              <AppText size={13} lh={1.4} weight={600} style={styles.errorText}>
                 {error}
               </AppText>
             </View>
           ) : null}
 
-          <Button
-            size="xl"
-            radius={12}
-            label={busy ? 'Signing in…' : 'Sign In'}
-            disabled={busy}
-            onPress={submit}
+          {/* Slide the white knob across to sign in (the keyboard's "go"
+              key does the same). It comes back if signing in fails. */}
+          <SlideToConfirm
+            tone="hero"
+            labelSide="right"
+            label="Slide to sign in"
+            holdKey={attempt}
+            busy={busy}
+            busyLabel="Signing in…"
+            onComplete={submit}
             style={styles.submit}
           />
-
-          <View style={styles.footer}>
-            <LockIcon size={13} color={colors.faint} />
-            <AppText size={11} color={colors.faint}>
-              Authorized access only · CMD Approval Hub
-            </AppText>
-          </View>
         </View>
-      </ScrollView>
+
+        <View style={[styles.footer, { paddingBottom: insets.bottom + mvs(24) }]}>
+          <Icon name="shield" size={15} stroke={2.2} color={colors.muted} />
+          <AppText size={12.5} weight={600} color={colors.muted}>
+            Authorized access only
+          </AppText>
+        </View>
+      </KeyboardScroll>
     </KeyboardAvoider>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.ground },
+  screen: { flex: 1, backgroundColor: colors.white },
   content: { flexGrow: 1 },
-  brand: {
-    alignItems: 'center',
-    backgroundColor: colors.brand,
-    paddingHorizontal: s(28),
-    // the card below overlaps this by the same amount
-    paddingBottom: mvs(36) + ms(40),
+  panel: {
+    overflow: 'hidden',
+    backgroundColor: colors.teal,
+    borderBottomLeftRadius: ms(48),
+    borderBottomRightRadius: ms(48),
   },
-  logoTile: {
-    width: ms(104),
-    height: ms(104),
-    borderRadius: ms(26),
+  ringThin: { left: -s(58), top: -ms(78) },
+  ringThick: { right: -s(23), bottom: -ms(33) },
+  logo: {
+    position: 'absolute',
+    left: s(24),
+    width: ms(58),
+    height: ms(58),
+    borderRadius: ms(29),
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: mvs(18),
+    overflow: 'hidden',
   },
-  logo: { width: '80%', height: '80%' },
-  tagline: { marginTop: mvs(8), maxWidth: s(280) },
-  card: {
-    marginTop: -ms(40),
-    marginHorizontal: s(16),
-    padding: ms(22),
-    borderRadius: ms(22),
-    backgroundColor: colors.card,
-    borderWidth: hairline,
-    borderColor: colors.line,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+  logoImage: { width: ms(42), height: ms(42) },
+  art: { position: 'absolute', left: 0, right: 0, height: ms(240) },
+  artBack: {
+    position: 'absolute',
+    left: s(150),
+    top: ms(24),
+    width: s(200),
+    height: ms(120),
+    borderRadius: ms(26),
+    backgroundColor: colors.mint,
+    transform: [{ rotate: '9deg' }],
   },
-  help: { marginTop: mvs(4), marginBottom: mvs(6) },
-  field: { marginTop: mvs(14) },
+  artCard: {
+    position: 'absolute',
+    left: s(128),
+    top: ms(46),
+    width: s(210),
+    borderRadius: ms(26),
+    backgroundColor: colors.white,
+    padding: ms(14),
+    gap: mvs(8),
+    transform: [{ rotate: '-5deg' }],
+    boxShadow: '0px 20px 40px rgba(5,58,50,0.18)',
+  },
+  artBar: { height: ms(8), borderRadius: ms(4) },
+  artRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  artTick: {
+    width: ms(38),
+    height: ms(38),
+    borderRadius: ms(19),
+    backgroundColor: colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: { position: 'absolute', left: s(24), bottom: ms(34), gap: mvs(8) },
+  tagline: { maxWidth: s(240) },
+
+  form: {
+    flex: 1,
+    paddingTop: mvs(28),
+    paddingHorizontal: s(22),
+    gap: mvs(14),
+  },
   error: {
-    marginTop: mvs(14),
-    paddingVertical: mvs(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(10),
+    backgroundColor: colors.yellowSoft,
+    borderRadius: ms(20),
+    paddingVertical: ms(11),
     paddingHorizontal: s(14),
-    borderRadius: ms(12),
-    backgroundColor: colors.badTint,
   },
-  submit: { marginTop: mvs(20) },
+  errorMark: {
+    width: ms(26),
+    height: ms(26),
+    borderRadius: ms(13),
+    backgroundColor: colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: { flex: 1 },
+  submit: { boxShadow: shadows.yellowSoft },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: s(6),
-    marginTop: mvs(18),
+    gap: s(7),
+    paddingTop: mvs(24),
+    paddingHorizontal: s(24),
   },
 });

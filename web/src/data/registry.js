@@ -4,7 +4,9 @@
    What is actually waiting — counts and items — comes live from the hub
    backend through data/adapter.js.
 
-   A stage's `key` is the one the source project uses for it. */
+   A stage's `key` is the one the source project uses for it. The optional
+   wording fields on a stage (approveFine, rejectTitle, rejectTo, …) replace
+   the default sentences where a software's own words fit better. */
 export const REGISTRY = [
   {
     id: 'ledgertrace',
@@ -48,6 +50,35 @@ export const REGISTRY = [
         approveTitle: 'RELEASE PAYMENT',
         confirm: 'Confirm release',
         bulk: 'Release all {n} payments',
+      },
+    ],
+  },
+  {
+    id: 'edos',
+    mono: 'ED',
+    name: 'eDOS',
+    sub: 'Directory of services · Test catalogue',
+    connected: true,
+    // eDOS decides a request one way or the other: approve or reject. It has
+    // no "send back" and no "move all" (so the stage has no `back` or `bulk`).
+    stages: [
+      {
+        key: 'req',
+        stage: 1,
+        label: 'Test Approval',
+        short: 'Requests',
+        done: 'Test approval is clear',
+        next: 'Live catalogue',
+        approveTitle: 'APPROVE TEST CHANGE',
+        confirm: 'Confirm approval',
+        approveFine: 'This change is written to the live test catalogue at once. It is logged against your name.',
+        approveDone: 'It is live in the catalogue.',
+        rejectTitle: 'Reject test change',
+        rejectTo: 'The requester',
+        rejectFine:
+          'The catalogue is left as it is. The person who asked for the change sees your reason. It is logged against your name.',
+        rejectDone: 'The catalogue is unchanged.',
+        rejectLabel: 'Reject',
       },
     ],
   },

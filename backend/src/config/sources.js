@@ -11,6 +11,12 @@ const SOURCES = [
     // The CMD's stages there, by the key LedgerTrace sends; used in notification text.
     stages: { inv: 'Invoice Approval', pay: 'Pay Approval', rel: 'Payment Release' },
   },
+  {
+    id: 'edos',
+    name: 'eDOS',
+    // One stage: a test addition or edit waiting for approval.
+    stages: { req: 'Test Approval' },
+  },
   { id: 'sp365', name: 'Sales Pulse 365' },
   { id: 'pace', name: 'PACE' },
   { id: 'tams', name: 'TAMS' },

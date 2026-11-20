@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
 }
 
 /** { user, token, ready, login(email, password), logout(),
-      changePassword(current, next) }
+      changePassword(next) }
     `ready` is false while the saved session is being read on app start;
     `user` is null when signed out. Each action throws an Error whose
     message can be shown. */
@@ -29,8 +29,7 @@ export function useAuth() {
     () => ({
       login: (email, password) => dispatch(login(email, password)),
       logout: () => dispatch(logout()),
-      changePassword: (current, next) =>
-        dispatch(changePassword(current, next)),
+      changePassword: next => dispatch(changePassword(next)),
     }),
     [dispatch],
   );

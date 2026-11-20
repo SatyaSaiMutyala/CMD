@@ -8,13 +8,17 @@ import { api } from './api';
 import {
   bannerCleared,
   bannerSet,
+  detailClosed,
+  goneAdded,
   pushSet,
   reminderClosed,
   reminderOpened,
   settingToggled,
   sheetBusySet,
   sheetClosed,
+  sheetDoneSet,
   sheetErrorSet,
+  sheetOpened,
   toastSet,
 } from './hubSlice';
 import { swPending, totalPending, visibleItems } from './selectors';
@@ -25,7 +29,7 @@ import { swPending, totalPending, visibleItems } from './selectors';
 
 export const CONNECTED = REGISTRY.filter(sw => sw.connected);
 const SNOOZE_MS = 15 * 60 * 1000;
-const BANNER_MS = 6000;
+export const BANNER_MS = 6000;
 
 // What each sheet type sends to the server, and how it reads afterwards
 const VERBS = {
@@ -43,6 +47,8 @@ let snoozeTimer = null;
 // After a failed refresh RTK Query keeps the last good data and adds the error.
 const liveOf = result => ({
   loaded: result.data !== undefined,
+  // When the list on screen was fetched (shown if a later refresh fails)
+  at: result.fulfilledTimeStamp || null,
   error: result.isError
     ? (result.error && result.error.message) || 'Could not load.'
     : null,
@@ -51,22 +57,37 @@ const liveOf = result => ({
 
 const NO_HISTORY = [];
 
-/** { live: { [swId]: { loaded, error, stages } }, history, settings } —
+/** { live: { [swId]: { loaded, error, stages } }, history, notifications,
+    settings } —
     the `store` object the screens and selectors.js work with. */
 export const selectHubStore = createSelector(
   [
     ...CONNECTED.map(sw => api.endpoints.getPending.select(sw.id)),
     api.endpoints.getHistory.select(),
+    api.endpoints.getNotifications.select(),
     state => state.hub.settings,
   ],
   (...parts) => {
     const settings = parts.pop();
+    const notifications = parts.pop();
     const history = parts.pop();
     const live = {};
     CONNECTED.forEach((sw, i) => {
       live[sw.id] = liveOf(parts[i]);
     });
-    return { live, history: history.data || NO_HISTORY, settings };
+    return {
+      live,
+      history: history.data || NO_HISTORY,
+      // false until the first answer has arrived (the pages shimmer till then)
+      historyLoaded: history.data !== undefined,
+      notifications: notifications.data
+        ? notifications.data.items
+        : NO_HISTORY,
+      // more pages on the server, and how many in the whole list are unread
+      notificationsMore: !!(notifications.data && notifications.data.hasMore),
+      unread: notifications.data ? notifications.data.unread : 0,
+      settings,
+    };
   },
 );
 
@@ -94,6 +115,32 @@ export const reloadAll = () => dispatch =>
 export const reloadHistory = () => dispatch =>
   dispatch(fetchNow('getHistory', undefined));
 
+/** The first page of notifications again (newer ones appear at the top) */
+export const reloadNotifications = () => dispatch =>
+  dispatch(fetchNow('getNotifications', undefined));
+
+/** The next page, added under what is already loaded */
+export const moreNotifications = () => (dispatch, getState) => {
+  const store = selectHubStore(getState());
+  const last = store.notifications[store.notifications.length - 1];
+  if (!last || !store.notificationsMore) return Promise.resolve();
+  return dispatch(fetchNow('getNotifications', last.ts));
+};
+
+const mutate = (endpoint, arg) => async dispatch => {
+  try {
+    await dispatch(api.endpoints[endpoint].initiate(arg)).unwrap();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+// Each resolves to true when the server accepted it
+export const readNotification = id => mutate('readNotification', id);
+export const readAllNotifications = () => mutate('readAllNotifications');
+export const deleteNotification = id => mutate('deleteNotification', id);
+export const deleteAllNotifications = () => mutate('deleteAllNotifications');
+
 /* ---- banner and reminder ---- */
 
 export const hideBanner = () => dispatch => {
@@ -110,6 +157,8 @@ export const showBanner = banner => dispatch => {
 /** A new approval arrived (from the live socket) */
 export const arrival = note => (dispatch, getState) => {
   const sw = findSoftware(note.software);
+  // It is on the Notifications page too, from now on
+  dispatch(reloadNotifications());
   chime(false, getState().hub.settings.sound);
   dispatch(
     showBanner({
@@ -133,6 +182,7 @@ export const showReminder = force => (dispatch, getState) => {
 
 /** The server's 15-minute reminder: fresh numbers first, then the screen */
 export const serverReminder = () => async (dispatch, getState) => {
+  dispatch(reloadNotifications());
   if (!getState().hub.settings.hourly) return;
   await dispatch(reloadAll());
   dispatch(showReminder());
@@ -153,6 +203,26 @@ export const reviewNow = () => (dispatch, getState) => {
   if (withPending.length === 1) openSoftware(withPending[0].id);
   else openHome();
 };
+
+/** Open the confirm sheet for one item (approve / back / reject) or for a
+    whole stage ('bulk'). `from` says where it was opened — 'deck' (the swipe
+    review), 'list' or 'details' — and decides what a success looks like.
+    `count` is how many a 'bulk' would move. */
+export const openSheet =
+  (type, swId, stage, id, { from = 'list', count = 0 } = {}) =>
+  (dispatch, getState) => {
+    const sw = findSoftware(swId);
+    const st = sw && sw.stages && sw.stages.find(x => x.key === stage);
+    if (!st) return;
+    if (type === 'bulk') {
+      dispatch(sheetOpened({ type, swId, stage, count, from }));
+      return;
+    }
+    const item = visibleItems(selectHubStore(getState()), sw, st).find(
+      i => i.id === id,
+    );
+    if (item) dispatch(sheetOpened({ type, swId, stage, id, item, from }));
+  };
 
 export const openBanner = () => (dispatch, getState) => {
   const { banner } = getState().hub;
@@ -216,13 +286,28 @@ export const enablePush = () => async dispatch => {
 /* ---- decisions ---- */
 
 /** Confirm the open sheet: send the decision, then say what happened.
-    The lists and the history refetch by themselves (RTK Query tags). */
+    The lists and the history refetch by themselves (RTK Query tags); what
+    was decided is hidden straight away meanwhile. */
 export const confirmSheet = reason => async (dispatch, getState) => {
   const { sheet, sheetBusy } = getState().hub;
   if (!sheet || sheetBusy) return;
   const sw = findSoftware(sheet.swId);
   const st = sw.stages.find(x => x.key === sheet.stage);
-  const items = visibleItems(selectHubStore(getState()), sw, st);
+  const hide = (ids, counts) =>
+    dispatch(
+      goneAdded({
+        swId: sw.id,
+        stage: st.key,
+        ids,
+        at: Date.now(),
+        counts: !!counts,
+      }),
+    );
+  // Back to the list the sheet (and the details page under it) came from
+  const close = () => {
+    dispatch(sheetClosed());
+    if (sheet.from === 'details') dispatch(detailClosed());
+  };
 
   dispatch(sheetBusySet(true));
   dispatch(sheetErrorSet(null));
@@ -232,15 +317,17 @@ export const confirmSheet = reason => async (dispatch, getState) => {
         api.endpoints.approveAll.initiate({ swId: sw.id, stage: st.stage }),
       ).unwrap();
       const moved = res.moved || [];
+      hide(moved);
       dispatch(
-        toastSet({ swId: sw.id, text: `Moved ${moved.length} to ${st.next}.` }),
+        toastSet({
+          swId: sw.id,
+          tone: 'ok',
+          text: `Moved ${moved.length} to ${st.next}.`,
+        }),
       );
+      close();
     } else {
-      const it = items.find(i => i.id === sheet.id);
-      if (!it) {
-        dispatch(sheetClosed());
-        return;
-      }
+      const it = sheet.item;
       const verb = VERBS[sheet.type];
       await dispatch(
         api.endpoints.decide.initiate({
@@ -250,27 +337,70 @@ export const confirmSheet = reason => async (dispatch, getState) => {
           reason: typeof reason === 'string' ? reason : '',
         }),
       ).unwrap();
+      hide([it.id], true);
       const past =
         sheet.type === 'approve' && st.key === 'rel' ? 'Released' : verb.past;
       const where =
         sheet.type === 'approve'
-          ? `Moved to ${st.next}.`
+          ? st.approveDone || `Moved to ${st.next}.`
           : sheet.type === 'back'
           ? `Returned to ${st.back}.`
-          : 'Returned to Registered.';
-      dispatch(toastSet({ swId: sw.id, text: `${past} ${it.id}. ${where}` }));
+          : st.rejectDone || 'Returned to Registered.';
+      // What people know the item by (a test code, an invoice number)
+      const ref = it.ref || it.id;
+      // A software's own sentence stands by itself ("PR781. It is live in
+      // the catalogue."); the default one continues from the reference
+      // ("INS-1140 moved to Tally Entry.")
+      const own =
+        (sheet.type === 'approve' && st.approveDone) ||
+        (sheet.type === 'reject' && st.rejectDone);
+      if (sheet.from === 'deck') {
+        // The swipe review stays on the sheet and shows the result there
+        dispatch(
+          sheetDoneSet({
+            title: past,
+            text: own
+              ? `${ref}. ${where} Logged against your name.`
+              : `${ref} ${where.charAt(0).toLowerCase()}${where.slice(
+                  1,
+                )} Logged against your name.`,
+          }),
+        );
+      } else {
+        dispatch(
+          toastSet({
+            swId: sw.id,
+            tone: 'ok',
+            text: `${past} ${ref}. ${where}`,
+            bold: ref,
+          }),
+        );
+        close();
+      }
     }
-    dispatch(sheetClosed());
   } catch (e) {
     if (e && e.status === 409) {
       // Someone (or an earlier tap) already actioned it: nothing to retry
-      dispatch(sheetClosed());
-      dispatch(toastSet({ swId: sw.id, text: e.message }));
+      if (sheet.item) hide([sheet.item.id]);
+      close();
+      dispatch(
+        toastSet({
+          swId: sw.id,
+          tone: 'info',
+          text: `${e.message} Nothing was sent again.`,
+          bold: sheet.item ? sheet.item.ref || sheet.item.id : undefined,
+        }),
+      );
     } else {
       dispatch(
-        sheetErrorSet(
-          (e && e.message) || 'Could not complete that. Try again.',
-        ),
+        sheetErrorSet({
+          // Status 0 = the server was never reached
+          title:
+            e && e.status === 0
+              ? `Couldn't reach ${sw.name}`
+              : "That didn't go through",
+          text: (e && e.message) || 'Could not complete that. Try again.',
+        }),
       );
     }
   } finally {

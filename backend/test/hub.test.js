@@ -180,3 +180,43 @@ test('a deactivated account loses access at once, including on the socket', asyn
   assert.ok(!app.events.some((e) => e.name === 'hub:subscribed'));
   await User.updateOne({ email: 'cmd@example.com' }, { is_active: true });
 });
+
+test('notifications come a page at a time, and can be marked read and removed from the list', async () => {
+  const Notification = require('../src/models/Notification');
+  await Notification.deleteMany({});
+  const t0 = Date.now() - 60000;
+  for (let i = 0; i < 5; i += 1) {
+    await Notification.create({ kind: 'arrival', software: 'ledgertrace', title: `New approval ${i}`, created_at: new Date(t0 + i * 1000) });
+  }
+  const list = (query = '') => call('GET', `/api/notifications${query}`, { headers: authed() });
+  assert.equal((await call('GET', '/api/notifications')).status, 401);
+
+  // Two pages of two, then the last one
+  const one = (await list('?limit=2')).json;
+  assert.deepEqual(one.items.map((n) => n.title), ['New approval 4', 'New approval 3']);
+  assert.equal(one.has_more, true);
+  assert.equal(one.unread, 5);
+  assert.equal(one.items[0].read, false);
+  const two = (await list(`?limit=2&before=${encodeURIComponent(one.items[1].at)}`)).json;
+  assert.deepEqual(two.items.map((n) => n.title), ['New approval 2', 'New approval 1']);
+  const three = (await list(`?limit=2&before=${encodeURIComponent(two.items[1].at)}`)).json;
+  assert.deepEqual(three.items.map((n) => n.title), ['New approval 0']);
+  assert.equal(three.has_more, false);
+
+  // One read, then all of them
+  await call('POST', `/api/notifications/${one.items[0].id}/read`, { headers: authed() });
+  assert.equal((await list()).json.unread, 4);
+  assert.equal((await call('POST', '/api/notifications/read-all', { headers: authed() })).json.changed, 4);
+  const read = (await list()).json;
+  assert.equal(read.unread, 0);
+  assert.equal(read.items.every((n) => n.read), true);
+
+  // One removed, then all: gone from the list, still in the database
+  assert.equal((await call('DELETE', '/api/notifications/not-an-id', { headers: authed() })).status, 404);
+  await call('DELETE', `/api/notifications/${one.items[0].id}`, { headers: authed() });
+  assert.deepEqual((await list()).json.items.map((n) => n.title).includes('New approval 4'), false);
+  assert.equal((await list()).json.items.length, 4);
+  assert.equal((await call('DELETE', '/api/notifications', { headers: authed() })).json.changed, 4);
+  assert.equal((await list()).json.items.length, 0);
+  assert.equal(await Notification.countDocuments({}), 5);
+});

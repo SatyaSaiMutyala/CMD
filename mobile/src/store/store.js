@@ -7,10 +7,12 @@ import {
 import { api } from './api';
 import authReducer, { sessionCleared, sessionSet } from './authSlice';
 import hubReducer, { settingToggled } from './hubSlice';
+import netReducer from './netSlice';
 
 /* The app's Redux store.
      auth  who is signed in                       (authSlice.js)
      hub   overlays and alert settings             (hubSlice.js)
+     net   the connection: online, slow, lost      (netSlice.js)
      api   everything fetched from the hub backend (api.js, RTK Query)
 
    A function rather than a single shared store, so each test starts clean. */
@@ -45,6 +47,7 @@ export function makeStore() {
     reducer: {
       auth: authReducer,
       hub: hubReducer,
+      net: netReducer,
       [api.reducerPath]: api.reducer,
     },
     middleware: getDefault =>

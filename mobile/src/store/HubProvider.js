@@ -18,8 +18,8 @@ import {
   pushSet,
   reminderClosed,
   sheetClosed,
-  sheetOpened,
   toastCleared,
+  visitStarted,
 } from './hubSlice';
 import {
   CONNECTED,
@@ -27,10 +27,17 @@ import {
   confirmSheet,
   enablePush,
   openBanner,
+  openSheet,
   previewArrival,
   reload,
   reloadAll,
+  moreNotifications,
+  readAllNotifications,
+  readNotification,
+  deleteAllNotifications,
+  deleteNotification,
   reloadHistory,
+  reloadNotifications,
   reviewNow,
   selectHubStore,
   sendPushToken,
@@ -65,6 +72,7 @@ export function HubProvider({ children }) {
         dispatch(api.endpoints.getPending.initiate(sw.id)),
       ),
       dispatch(api.endpoints.getHistory.initiate()),
+      dispatch(api.endpoints.getNotifications.initiate()),
     ];
 
     const nudges = {};
@@ -79,13 +87,17 @@ export function HubProvider({ children }) {
       },
       onArrival: note => dispatch(arrival(note)),
       onReminder: () => dispatch(serverReminder()),
-      onReconnect: () => dispatch(reloadAll()),
+      onReconnect: () => {
+        dispatch(reloadAll());
+        dispatch(reloadNotifications());
+      },
     });
 
     const appState = AppState.addEventListener('change', state => {
       if (state === 'active') {
         dispatch(reloadAll());
         dispatch(reloadHistory());
+        dispatch(reloadNotifications());
       }
     });
 
@@ -162,8 +174,10 @@ export function HubProvider({ children }) {
 }
 
 /** Everything a screen needs from the hub:
-      store        { live, history, settings } — read it with selectors.js
-      detail, sheet, sheetBusy, sheetError, toast, banner, remindOpen, push
+      store        { live, history, notifications, notificationsMore, unread,
+                   settings } — read it with selectors.js
+      detail, sheet, sheetBusy, sheetError, sheetDone, toast, banner,
+      remindOpen, push, gone, decided
       and the actions below. The actions keep the same identity between
       renders, so they are safe to use inside effects. */
 export function useHub() {
@@ -174,8 +188,12 @@ export function useHub() {
   const actions = useMemo(
     () => ({
       reload: swId => dispatch(reload(swId)),
-      openSheet: (type, swId, stage, id) =>
-        dispatch(sheetOpened({ type, swId, stage, id })),
+      // extra = { from: 'deck' | 'list' | 'details', count }
+      openSheet: (type, swId, stage, id, extra) =>
+        dispatch(openSheet(type, swId, stage, id, extra)),
+      // A software's page was opened: its progress starts from nothing.
+      // (The page asks for a fresh list itself, once it is on screen.)
+      startVisit: swId => dispatch(visitStarted(swId)),
       closeSheet: () => dispatch(sheetClosed()),
       // One item in full, with its documents
       openDetail: (swId, stage, id) =>
@@ -183,6 +201,14 @@ export function useHub() {
       closeDetail: () => dispatch(detailClosed()),
       confirmSheet: reason => dispatch(confirmSheet(reason)),
       clearToast: () => dispatch(toastCleared()),
+      // Notifications: the first page again, the next page, and the changes
+      // (each of those resolves to true when the server accepted it)
+      reloadNotifications: () => dispatch(reloadNotifications()),
+      moreNotifications: () => dispatch(moreNotifications()),
+      readNotification: id => dispatch(readNotification(id)),
+      readAllNotifications: () => dispatch(readAllNotifications()),
+      deleteNotification: id => dispatch(deleteNotification(id)),
+      deleteAllNotifications: () => dispatch(deleteAllNotifications()),
 
       toggleSetting: name => dispatch(toggleSetting(name)),
       enablePush: () => dispatch(enablePush()),
@@ -203,6 +229,9 @@ export function useHub() {
     sheet: hub.sheet,
     sheetBusy: hub.sheetBusy,
     sheetError: hub.sheetError,
+    sheetDone: hub.sheetDone,
+    gone: hub.gone,
+    decided: hub.decided,
     toast: hub.toast,
     banner: hub.banner,
     remindOpen: hub.remindOpen,

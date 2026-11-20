@@ -1,42 +1,59 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHub } from '../../store/HubProvider';
-import { colors, hairline, ms, mvs, s } from '../../theme';
-import { AppText, Mono } from '../common';
-import { TAB_BAR_HEIGHT } from '../../navigation/routes';
+import { BANNER_MS } from '../../store/hubThunks';
+import { colors, ms, mvs, s, shadows } from '../../theme';
+import { AppText } from '../common';
+import { Icon } from '../icons';
 
-/* Snackbar that slides up above the tab bar when a new approval arrives; tap to open it */
+/* The teal card that drops in from the top when a new approval arrives.
+   Tap it to open the software it is about; it leaves by itself, and the
+   yellow line along its bottom shows how long it has left. */
 export default function ArrivalBanner() {
   const { banner, openBanner } = useHub();
   const insets = useSafeAreaInsets();
   const drop = useRef(new Animated.Value(0)).current;
-  const shown = !!banner;
+  const left = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (!shown) return;
+    if (!banner) return undefined;
     drop.setValue(0);
+    left.setValue(1);
     Animated.timing(drop, {
       toValue: 1,
-      duration: 250,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [shown, drop]);
+    const countdown = Animated.timing(left, {
+      toValue: 0,
+      duration: BANNER_MS,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
+    countdown.start();
+    return () => countdown.stop();
+  }, [banner, drop, left]);
 
   if (!banner) return null;
+
+  // "New approval · ₹7,662": the amount is picked out in yellow
+  const [lead, ...rest] = String(banner.title).split(' · ');
+  const amount = rest.find(part => part.startsWith('₹'));
 
   return (
     <Animated.View
       style={[
         styles.wrap,
-        { bottom: ms(TAB_BAR_HEIGHT) + insets.bottom + mvs(10) },
+        { top: insets.top + mvs(8) },
         {
           opacity: drop,
           transform: [
             {
               translateY: drop.interpolate({
                 inputRange: [0, 1],
-                outputRange: [30, 0],
+                outputRange: [-ms(90), 0],
               }),
             },
           ],
@@ -45,17 +62,44 @@ export default function ArrivalBanner() {
     >
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`${banner.title}. ${banner.sub}`}
         onPress={openBanner}
         style={styles.card}
       >
-        <Mono label={banner.mono} size={38} radius={10} fontSize={14} />
-        <View style={styles.copy}>
-          <AppText size={14} weight={700} numberOfLines={1}>
-            {banner.title}
+        <View style={styles.mono}>
+          <AppText display size={17} weight={800}>
+            {banner.mono}
           </AppText>
-          <AppText size={12.5} color={colors.muted} numberOfLines={1}>
+          <View style={styles.dot} />
+        </View>
+        <View style={styles.copy}>
+          <View style={styles.title}>
+            <AppText size={15.5} weight={800} color={colors.white} numberOfLines={1}>
+              {amount ? `${lead} · ` : banner.title}
+            </AppText>
+            {amount ? (
+              <View style={styles.amount}>
+                <AppText size={15.5} weight={800}>
+                  {amount}
+                </AppText>
+              </View>
+            ) : null}
+          </View>
+          <AppText
+            size={12.5}
+            lh={1.35}
+            weight={600}
+            color={colors.white}
+            numberOfLines={1}
+          >
             {banner.sub}
           </AppText>
+        </View>
+        <Icon name="chevronRight" size={20} stroke={2.4} color={colors.white} />
+        <View style={styles.track}>
+          <Animated.View
+            style={[styles.left, { transform: [{ scaleX: left }] }]}
+          />
         </View>
       </Pressable>
     </Animated.View>
@@ -63,28 +107,60 @@ export default function ArrivalBanner() {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: s(12),
-    right: s(12),
-    zIndex: 25,
-    elevation: 12,
-    borderRadius: ms(16),
-    backgroundColor: colors.white,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 10 },
-  },
+  wrap: { position: 'absolute', left: s(12), right: s(12) },
   card: {
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     gap: s(12),
-    borderWidth: hairline,
-    borderColor: colors.brand,
-    borderRadius: ms(16),
-    paddingVertical: mvs(12),
-    paddingHorizontal: s(14),
+    backgroundColor: colors.teal,
+    borderRadius: ms(30),
+    paddingTop: ms(14),
+    paddingHorizontal: ms(14),
+    paddingBottom: ms(20),
+    boxShadow: shadows.banner,
   },
-  copy: { flex: 1 },
+  mono: {
+    width: ms(52),
+    height: ms(52),
+    borderRadius: ms(26),
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: ms(16),
+    height: ms(16),
+    borderRadius: ms(8),
+    backgroundColor: colors.yellow,
+    borderWidth: 3,
+    borderColor: colors.teal,
+  },
+  copy: { flex: 1, minWidth: 0, gap: 3 },
+  title: { flexDirection: 'row', alignItems: 'center' },
+  amount: {
+    paddingVertical: 1,
+    paddingHorizontal: ms(7),
+    borderRadius: ms(8),
+    backgroundColor: colors.yellow,
+  },
+  track: {
+    position: 'absolute',
+    left: ms(24),
+    right: ms(24),
+    bottom: ms(9),
+    height: ms(4),
+    borderRadius: ms(2),
+    backgroundColor: colors.tealLight,
+    overflow: 'hidden',
+  },
+  left: {
+    flex: 1,
+    borderRadius: ms(2),
+    backgroundColor: colors.yellow,
+    transformOrigin: 'left',
+  },
 });

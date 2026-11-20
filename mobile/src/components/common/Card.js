@@ -1,23 +1,30 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { colors, hairline, ms } from '../../theme';
+import { View } from 'react-native';
+import { colors, hairline, ms, s } from '../../theme';
 
-/* White bordered surface used for every card and row in the app */
+/* A rounded surface. White with a border by default; give `bg` for a tint. */
 export default function Card({
-  radius = 16,
-  borderColor = colors.line,
-  dashed,
-  style,
   children,
+  bg = colors.white,
+  radius = 28,
+  pad = 18,
+  border = bg === colors.white,
+  shadow,
+  style,
   ...rest
 }) {
   return (
     <View
       {...rest}
       style={[
-        styles.card,
-        { borderRadius: ms(radius), borderColor },
-        dashed ? styles.dashed : null,
+        {
+          backgroundColor: bg,
+          borderRadius: ms(radius),
+          padding: s(pad),
+          borderWidth: border ? hairline : 0,
+          borderColor: colors.line,
+        },
+        shadow ? { boxShadow: shadow } : null,
         style,
       ]}
     >
@@ -25,8 +32,3 @@ export default function Card({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { backgroundColor: colors.card, borderWidth: hairline },
-  dashed: { borderStyle: 'dashed' },
-});

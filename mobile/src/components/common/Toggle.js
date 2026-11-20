@@ -2,33 +2,33 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet } from 'react-native';
 import { colors, ms } from '../../theme';
 
-const WIDTH = ms(52);
-const HEIGHT = ms(32);
+const W = ms(52);
+const H = ms(32);
 const KNOB = ms(26);
 const PAD = ms(3);
 
-/* On/off switch drawn to match the design (the platform switch looks different on each OS) */
+/* On/off switch: yellow when on */
 export default function Toggle({ value, onChange, label }) {
-  const x = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const at = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(x, {
+    Animated.timing(at, {
       toValue: value ? 1 : 0,
-      duration: 150,
+      duration: 160,
       useNativeDriver: true,
     }).start();
-  }, [value, x]);
+  }, [value, at]);
 
   return (
     <Pressable
       accessibilityRole="switch"
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: !!value }}
       accessibilityLabel={label}
       onPress={onChange}
       hitSlop={8}
       style={[
         styles.track,
-        { backgroundColor: value ? colors.brand : colors.switchOff },
+        { backgroundColor: value ? colors.yellow : colors.tealLight },
       ]}
     >
       <Animated.View
@@ -37,9 +37,9 @@ export default function Toggle({ value, onChange, label }) {
           {
             transform: [
               {
-                translateX: x.interpolate({
+                translateX: at.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [0, WIDTH - KNOB - PAD * 2],
+                  outputRange: [0, W - KNOB - PAD * 2],
                 }),
               },
             ],
@@ -51,21 +51,14 @@ export default function Toggle({ value, onChange, label }) {
 }
 
 const styles = StyleSheet.create({
-  track: {
-    width: WIDTH,
-    height: HEIGHT,
-    borderRadius: HEIGHT / 2,
-    padding: PAD,
-  },
+  track: { width: W, height: H, borderRadius: H / 2 },
   knob: {
+    position: 'absolute',
+    top: PAD,
+    left: PAD,
     width: KNOB,
     height: KNOB,
     borderRadius: KNOB / 2,
     backgroundColor: colors.white,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 1.5,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
   },
 });

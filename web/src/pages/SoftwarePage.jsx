@@ -108,7 +108,8 @@ function Stages({ sw }) {
               <ApprovalCard
                 item={item}
                 onApprove={() => open('approve', item.id)}
-                onSendBack={() => open('back', item.id)}
+                onSendBack={item.canSendBack === false ? undefined : () => open('back', item.id)}
+                rejectLabel={stage.rejectLabel}
                 onDetails={() => openDetail(sw.id, stage.key, item.id)}
                 onReject={item.canReject ? () => open('reject', item.id) : undefined}
               />

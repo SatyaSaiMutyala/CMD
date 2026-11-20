@@ -93,7 +93,7 @@ function Details() {
     body = (
       <Grid container columns={12} spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Section title="Figures">
+          <Section title={data.factsTitle || 'Figures'}>
             {data.facts.map(([label, value], i) => (
               <Stack key={label} direction="row" sx={{ justifyContent: 'space-between', gap: 2, ...rowSx(!i) }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -182,7 +182,7 @@ function Details() {
     <Dialog open onClose={closeDetail} maxWidth="md" fullWidth scroll="paper" aria-label="Details">
       <DialogTitle sx={{ pb: 1 }}>
         <Typography variant="mono" sx={{ display: 'block', fontWeight: 600, color: 'hub.info' }}>
-          {detail.id} · {sw.name}
+          {(data && data.ref) || detail.id} · {sw.name}
           {data && data.stageName ? ` · ${data.stageName}` : ''}
         </Typography>
         {data ? data.party : 'Details'}
@@ -194,9 +194,15 @@ function Details() {
         </Button>
         {data ? (
           <>
-            <Button variant="outlined" color="error" onClick={() => decide('back')}>
-              Send back
-            </Button>
+            {data.canSendBack === false ? (
+              <Button variant="outlined" color="error" onClick={() => decide('reject')}>
+                {stage.rejectLabel || 'Reject'}
+              </Button>
+            ) : (
+              <Button variant="outlined" color="error" onClick={() => decide('back')}>
+                Send back
+              </Button>
+            )}
             <Button variant="contained" color="success" onClick={() => decide('approve')}>
               {approveLabel}
             </Button>

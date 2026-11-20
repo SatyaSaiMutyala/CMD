@@ -232,11 +232,12 @@ export const confirmSheet = (reason) => async (dispatch, getState) => {
       const past = sheet.type === 'approve' && st.key === 'rel' ? 'Released' : verb.past
       const where =
         sheet.type === 'approve'
-          ? `Moved to ${st.next}.`
+          ? st.approveDone || `Moved to ${st.next}.`
           : sheet.type === 'back'
             ? `Returned to ${st.back}.`
-            : 'Returned to Registered.'
-      dispatch(toastSet({ swId: sw.id, text: `${past} ${it.id}. ${where}` }))
+            : st.rejectDone || 'Returned to Registered.'
+      // What people know the item by (a test code, an invoice number)
+      dispatch(toastSet({ swId: sw.id, text: `${past} ${it.ref || it.id}. ${where}` }))
     }
     dispatch(sheetClosed())
   } catch (e) {

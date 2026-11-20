@@ -1,263 +1,207 @@
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  BackHandler,
-  Easing,
-  ScrollView,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import React from 'react';
+import { Modal, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { REGISTRY } from '../../data/registry';
 import { useHub } from '../../store/HubProvider';
 import { swPending, totalPending } from '../../store/selectors';
-import { colors, ms, mvs, s } from '../../theme';
-import { clockTime } from '../../utils/format';
-import { AppText, Button, Eyebrow } from '../common';
+import { colors, ms, mvs, s, shadows } from '../../theme';
+import { clockParts, weekdayDate } from '../../utils/format';
+import { AppText, Button, Eyebrow, Mono, Ring } from '../common';
+import { Icon } from '../icons';
 
-const RING = ms(170);
+/* Full-screen reminder, every 15 minutes, of what is still pending: the time,
+   the count, where the approvals are, and three ways out.
 
-/* Brand-coloured glow behind the count, fading to the darker shade */
-function Glow() {
-  const { width, height } = useWindowDimensions();
-  const cy = height * 0.28;
-  const radius = 0.62 * Math.hypot(width / 2, height - cy);
-  return (
-    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <Defs>
-        <RadialGradient
-          id="glow"
-          gradientUnits="userSpaceOnUse"
-          cx={width / 2}
-          cy={cy}
-          r={radius}
-        >
-          <Stop offset="0" stopColor={colors.brand} />
-          <Stop offset="1" stopColor={colors.brandDark} />
-        </RadialGradient>
-      </Defs>
-      <Rect width={width} height={height} fill="url(#glow)" />
-    </Svg>
-  );
-}
-
-/* A ring that pulses outwards; two are shown, half a cycle apart */
-function PulseRing({ delay, still }) {
-  const pulse = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (still) return undefined;
-    // The second ring starts half a cycle later, so one ring is always in view
-    const loop = Animated.sequence([
-      Animated.delay(delay),
-      Animated.loop(
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ),
-    ]);
-    loop.start();
-    return () => loop.stop();
-  }, [delay, still, pulse]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.pulse,
-        still
-          ? styles.pulseStill
-          : {
-              opacity: pulse.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.6, 0],
-              }),
-              transform: [
-                {
-                  scale: pulse.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.7, 1.25],
-                  }),
-                },
-              ],
-            },
-      ]}
-    />
-  );
-}
-
-/* Full-screen reminder every 15 minutes of what is still pending */
+   It is shown in its own window (a Modal), so it covers everything — the tab
+   bar, any page or sheet that is open, and the areas behind the status bar
+   and the navigation bar on Android. */
 export default function ReminderOverlay() {
   const { remindOpen, store, reviewNow, snoozeReminder, dismissReminder } =
     useHub();
   const insets = useSafeAreaInsets();
-  const fade = useRef(new Animated.Value(0)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    if (!remindOpen) return undefined;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then(setReduceMotion)
-      .catch(() => {});
-    fade.setValue(0);
-    Animated.timing(fade, {
-      toValue: 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      dismissReminder();
-      return true;
-    });
-    return () => back.remove();
-  }, [remindOpen, fade, dismissReminder]);
-
   if (!remindOpen) return null;
 
+  const now = new Date();
+  const [time, half] = clockParts(now);
   const total = totalPending(store);
   let rows = REGISTRY.filter(sw => sw.connected && swPending(store, sw) > 0);
   if (!rows.length) rows = REGISTRY.filter(sw => sw.connected);
 
   return (
-    <Animated.View
-      style={[styles.host, { opacity: fade }]}
-      accessibilityViewIsModal
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
+      presentationStyle="overFullScreen"
+      // Android's back button dismisses it
+      onRequestClose={dismissReminder}
     >
-      <Glow />
-      <ScrollView
-        bounces={false}
-        overScrollMode="never"
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: mvs(48) + insets.top,
-            paddingBottom: mvs(28) + insets.bottom,
-          },
-        ]}
-      >
-        <AppText size={14} color={colors.onBrandSoft} spacing={0.5}>
-          {clockTime(new Date())}
-        </AppText>
-        <Eyebrow
-          size={12}
-          spacing={1.6}
-          color={colors.onBrand}
-          style={styles.head}
-        >
-          APPROVALS PENDING
-        </Eyebrow>
-
-        <View style={styles.ring}>
-          <PulseRing delay={0} still={reduceMotion} />
-          {reduceMotion ? null : <PulseRing delay={1200} />}
-          <AppText display size={96} lh={1} color={colors.onBrand}>
-            {total}
-          </AppText>
-        </View>
-
-        <AppText
-          display
-          weight={600}
-          size={22}
+      <View style={styles.host} accessibilityViewIsModal>
+        <StatusBar barStyle="dark-content" />
+        <Ring
+          size={240}
+          width={40}
           color={colors.white}
-          align="center"
-          style={styles.label}
+          opacity={0.7}
+          style={styles.ringThick}
+        />
+        <Ring size={380} color={colors.white} style={styles.ringThin} />
+        <ScrollView
+          bounces={false}
+          overScrollMode="never"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: insets.top + mvs(16),
+              paddingBottom: insets.bottom + mvs(30),
+            },
+          ]}
         >
-          {total === 1 ? 'approval is' : 'approvals are'} waiting for you
-        </AppText>
+          <View style={styles.head}>
+            <View style={styles.bellHalo}>
+              <View style={styles.bell}>
+                <Icon name="bell" size={22} stroke={2.4} color={colors.white} />
+              </View>
+            </View>
+            <Eyebrow size={13} track={0.08} color={colors.ink}>
+              PENDING REMINDER
+            </Eyebrow>
+          </View>
 
-        <View style={styles.list}>
-          {rows.map((sw, i) => (
-            <View key={sw.id} style={[styles.row, i ? styles.rowLine : null]}>
-              <AppText size={16} color={colors.white}>
-                {sw.name}
+          <View style={styles.clock}>
+            <View style={styles.time}>
+              <AppText display size={108} lh={1} weight={800} track={-0.04}>
+                {time}
               </AppText>
-              <AppText display size={18} color={colors.onBrand}>
-                {swPending(store, sw) || 0}
+              <AppText display size={28} weight={700}>
+                {half}
               </AppText>
             </View>
-          ))}
-        </View>
+            <AppText size={16} weight={600}>
+              {weekdayDate(now)}
+            </AppText>
+          </View>
 
-        <View style={styles.spacer} />
+          <View style={styles.card}>
+            <View style={styles.count}>
+              <AppText display size={68} lh={1} weight={800}>
+                {total}
+              </AppText>
+              <AppText size={16} lh={1.3} weight={700} style={styles.countText}>
+                {total === 1 ? 'approval is' : 'approvals are'}
+                {'\n'}waiting for you
+              </AppText>
+            </View>
+            {rows.map(sw => (
+              <View key={sw.id} style={styles.row}>
+                <Mono label={sw.mono} size={40} radius={13} fontSize={14} />
+                <AppText size={15} weight={700} style={styles.grow}>
+                  {sw.name}
+                </AppText>
+                <View style={styles.rowCount}>
+                  <AppText size={15} weight={800}>
+                    {swPending(store, sw) || 0}
+                  </AppText>
+                </View>
+              </View>
+            ))}
+          </View>
 
-        <Button
-          variant="light"
-          size="xl"
-          label="Review now"
-          onPress={reviewNow}
-          style={styles.review}
-        />
-        <Button
-          variant="glass"
-          size="xl"
-          height={50}
-          fontSize={15}
-          label="Remind me in 15 minutes"
-          onPress={snoozeReminder}
-          style={styles.snooze}
-        />
-        <AppText
-          size={14}
-          color={colors.onBrandSoft}
-          underline
-          accessibilityRole="button"
-          onPress={dismissReminder}
-          style={styles.dismiss}
-        >
-          Dismiss
-        </AppText>
-      </ScrollView>
-    </Animated.View>
+          <View style={styles.actions}>
+            <Button
+              variant="teal"
+              height={62}
+              fontSize={17}
+              iconRight="chevronsRight"
+              iconSize={20}
+              label="Review now"
+              shadow={shadows.tealButton}
+              onPress={reviewNow}
+            />
+            <Button
+              variant="white"
+              weight={700}
+              icon="clock"
+              iconStroke={2.2}
+              label="Remind me in 15 minutes"
+              onPress={snoozeReminder}
+            />
+            <Button
+              variant="text"
+              height={46}
+              weight={700}
+              underline
+              label="Dismiss"
+              onPress={dismissReminder}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   host: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: colors.brandDark,
-    zIndex: 30,
-    elevation: 30,
+    flex: 1,
+    backgroundColor: colors.yellow,
+    overflow: 'hidden',
   },
-  content: { flexGrow: 1, alignItems: 'center', paddingHorizontal: s(24) },
-  head: { marginTop: mvs(6) },
-  ring: {
-    width: RING,
-    height: RING,
-    marginTop: mvs(34),
-    marginBottom: mvs(10),
+  ringThick: { right: -s(40), top: -ms(40) },
+  ringThin: { right: -s(110), top: -ms(110) },
+  content: { flexGrow: 1, paddingHorizontal: s(22) },
+  grow: { flex: 1 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: s(10) },
+  bellHalo: {
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
+    backgroundColor: colors.yellowMid,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: -ms(8),
+    marginRight: 0,
+  },
+  bell: {
+    width: ms(48),
+    height: ms(48),
+    borderRadius: ms(24),
+    backgroundColor: colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pulse: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: RING / 2,
-    borderWidth: 2,
-    borderColor: colors.onBrand,
+  clock: { marginTop: mvs(40), gap: 4 },
+  time: { flexDirection: 'row', alignItems: 'baseline', gap: s(6) },
+  card: {
+    marginTop: mvs(36),
+    backgroundColor: colors.white,
+    borderRadius: ms(32),
+    padding: s(22),
+    gap: mvs(16),
+    boxShadow: shadows.reminderCard,
   },
-  pulseStill: { opacity: 0.5 },
-  label: { marginBottom: mvs(24) },
-  list: {
-    alignSelf: 'stretch',
-    backgroundColor: colors.glassSoft,
-    borderRadius: ms(16),
-    paddingVertical: mvs(4),
-    paddingHorizontal: s(16),
-  },
+  count: { flexDirection: 'row', alignItems: 'flex-end', gap: s(12) },
+  countText: { paddingBottom: 4, flexShrink: 1 },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: s(12),
-    paddingVertical: mvs(13),
+    backgroundColor: colors.mint,
+    borderRadius: ms(18),
+    paddingVertical: ms(10),
+    paddingHorizontal: s(14),
   },
-  rowLine: { borderTopWidth: 1, borderTopColor: colors.glassLine },
-  spacer: { flexGrow: 1, minHeight: mvs(24) },
-  review: { alignSelf: 'stretch' },
-  snooze: { alignSelf: 'stretch', marginTop: mvs(12) },
-  dismiss: { marginTop: mvs(14), padding: ms(8) },
+  rowCount: {
+    minWidth: ms(40),
+    height: ms(30),
+    borderRadius: ms(15),
+    paddingHorizontal: s(10),
+    backgroundColor: colors.yellow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actions: { marginTop: 'auto', paddingTop: mvs(28), gap: mvs(10) },
 });

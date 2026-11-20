@@ -1,32 +1,38 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { colors, fontFor, ms } from '../../theme';
+import { colors, fontStyle, fs } from '../../theme';
 
-/* The one text component. Sizes are given in design pixels and scaled here.
-   display  use Space Grotesk instead of Inter
+/* The one text component. Sizes are given in design pixels and scaled here
+   (theme/metrics.js: fs).
+   display  Bricolage Grotesque instead of Inter (titles, amounts, counts)
    lh       line height as a multiple of the font size (e.g. 1.4)
-   spacing  letter spacing in points                                        */
+   track    letter spacing as a multiple of the font size (e.g. 0.09)       */
 export default function AppText({
   size = 14,
   weight = 400,
   display = false,
   color = colors.ink,
   lh,
-  spacing,
+  track,
   align,
   underline,
   style,
   ...rest
 }) {
-  const fontSize = ms(size);
+  const fontSize = fs(size);
   return (
     <Text
-      maxFontSizeMultiplier={1.3}
+      // The same size on every phone, whatever its text-size setting: the
+      // layout is drawn tightly and the two platforms scale text differently
+      allowFontScaling={false}
       {...rest}
       style={[
-        { fontFamily: fontFor(display, weight), fontSize, color },
-        lh ? { lineHeight: fontSize * lh } : null,
-        spacing != null ? { letterSpacing: spacing } : null,
+        styles.base,
+        fontStyle(display, weight),
+        { fontSize, color },
+        // Never tighter than the glyphs themselves: tall digits would be cut
+        lh ? { lineHeight: fontSize * Math.max(lh, 1) } : null,
+        track != null ? { letterSpacing: fontSize * track } : null,
         align ? { textAlign: align } : null,
         underline ? styles.underline : null,
         style,
@@ -36,5 +42,6 @@ export default function AppText({
 }
 
 const styles = StyleSheet.create({
+  base: { includeFontPadding: false },
   underline: { textDecorationLine: 'underline' },
 });

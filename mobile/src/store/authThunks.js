@@ -71,8 +71,6 @@ export const logout = () => async dispatch => {
 
 /** The server answers with a fresh token for this phone; every other device
     is signed out. */
-export const changePassword = (current, next) => async dispatch => {
-  dispatch(
-    sessionSet(await send(dispatch, 'changePassword', { current, next })),
-  );
+export const changePassword = next => async dispatch => {
+  dispatch(sessionSet(await send(dispatch, 'changePassword', next)));
 };

@@ -120,7 +120,13 @@ object ReminderNotifier {
     return state.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
   }
 
-  const val BRAND = 0xFF22A991.toInt()
-  const val BRAND_DARK = 0xFF0F4F45.toInt()
-  const val GOLD = 0xFFFFC81F.toInt()
+  // The colours of the app's design (src/theme/colors.js)
+  const val BRAND = 0xFF27B198.toInt()
+  const val INK = 0xFF053A32.toInt()
+  const val MUTED = 0xFF3D6B63.toInt()
+  const val YELLOW = 0xFFFFED00.toInt()
+  const val MINT = 0xFFEAF8F5.toInt()
+  // Older names, still used by the setup screen kept for older builds
+  const val BRAND_DARK = BRAND
+  const val GOLD = YELLOW
 }
