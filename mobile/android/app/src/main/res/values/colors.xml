@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tint of the hub's notification icon (the app's brand green).
+         Referenced from firebase.json. -->
+    <color name="notification_brand">#22A991</color>
+</resources>
