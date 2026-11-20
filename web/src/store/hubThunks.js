@@ -47,22 +47,35 @@ const liveOf = (result) => ({
 
 const NO_HISTORY = []
 
-/** { live: { [swId]: { loaded, error, stages } }, history, settings } —
+/** { live: { [swId]: { loaded, error, stages } }, history, notifications,
+    notificationsLoaded, notificationsMore, unread, settings } —
     the `store` object the pages and selectors.js work with. */
 export const selectHubStore = createSelector(
   [
     ...CONNECTED.map((sw) => api.endpoints.getPending.select(sw.id)),
     api.endpoints.getHistory.select(),
+    api.endpoints.getNotifications.select(),
     (state) => state.hub.settings,
   ],
   (...parts) => {
     const settings = parts.pop()
+    const notifications = parts.pop()
     const history = parts.pop()
     const live = {}
     CONNECTED.forEach((sw, i) => {
       live[sw.id] = liveOf(parts[i])
     })
-    return { live, history: history.data || NO_HISTORY, settings }
+    return {
+      live,
+      history: history.data || NO_HISTORY,
+      notifications: notifications.data ? notifications.data.items : NO_HISTORY,
+      // false until the first answer has arrived
+      notificationsLoaded: notifications.data !== undefined,
+      // more pages on the server, and how many in the whole list are unread
+      notificationsMore: !!(notifications.data && notifications.data.hasMore),
+      unread: notifications.data ? notifications.data.unread : 0,
+      settings,
+    }
   },
 )
 
@@ -90,6 +103,31 @@ export const reloadAll = () => (dispatch) => Promise.all(CONNECTED.map((sw) => d
 
 export const reloadHistory = () => (dispatch) => dispatch(fetchNow('getHistory', undefined))
 
+/** The first page of notifications again (newer ones appear at the top) */
+export const reloadNotifications = () => (dispatch) => dispatch(fetchNow('getNotifications', undefined))
+
+/** The next page, added under what is already loaded */
+export const moreNotifications = () => (dispatch, getState) => {
+  const store = selectHubStore(getState())
+  const last = store.notifications[store.notifications.length - 1]
+  if (!last || !store.notificationsMore) return Promise.resolve()
+  return dispatch(fetchNow('getNotifications', last.ts))
+}
+
+// Each resolves to true when the server accepted it
+const mutate = (endpoint, arg) => async (dispatch) => {
+  try {
+    await dispatch(api.endpoints[endpoint].initiate(arg)).unwrap()
+    return true
+  } catch {
+    return false
+  }
+}
+export const readNotification = (id) => mutate('readNotification', id)
+export const readAllNotifications = () => mutate('readAllNotifications')
+export const removeNotification = (id) => mutate('removeNotification', id)
+export const removeAllNotifications = () => mutate('removeAllNotifications')
+
 /* ---- snackbar and reminder ---- */
 
 export const hideBanner = () => (dispatch) => {
@@ -108,6 +146,8 @@ export const arrival = (note) => (dispatch, getState) => {
   const sw = findSoftware(note.software)
   const title = note.title || 'New approval'
   const sub = note.body || (sw ? sw.name : '')
+  // It is in the notifications list too, from now on
+  dispatch(reloadNotifications())
   chime(false, getState().hub.settings.sound)
   dispatch(showBanner({ mono: sw ? sw.mono : '•', title, sub, swId: sw ? sw.id : null }))
   notify(title, sub)
@@ -131,6 +171,7 @@ export const showReminder = (force) => (dispatch, getState) => {
 
 /** The server's 15-minute reminder: fresh numbers first, then the screen */
 export const serverReminder = () => async (dispatch, getState) => {
+  dispatch(reloadNotifications())
   if (!getState().hub.settings.hourly) return
   await dispatch(reloadAll())
   dispatch(showReminder())

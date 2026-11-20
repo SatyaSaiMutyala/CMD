@@ -13,6 +13,13 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- Neither is needed to run the app. Android assumes both are (portrait
+         from the reminder screen's orientation, Wi-Fi from a library's
+         permission), and Google Play then hides the app from devices
+         without them unless they are marked optional here. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"

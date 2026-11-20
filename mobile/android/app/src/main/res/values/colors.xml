@@ -5,4 +5,6 @@
     <color name="notification_brand">#27B198</color>
     <!-- Behind the app while it starts: the same teal as the opening screen -->
     <color name="launch_background">#27B198</color>
+    <!-- Behind the app icon's tiles (see mipmap-anydpi-v26) -->
+    <color name="ic_launcher_background">#27B198</color>
 </resources>

@@ -14,8 +14,14 @@ import {
   confirmSheet,
   enablePush,
   hideBanner,
+  moreNotifications,
   previewArrival,
+  readAllNotifications,
+  readNotification,
   reload,
+  reloadNotifications,
+  removeAllNotifications,
+  removeNotification,
   selectHubStore,
   selectOnlyPending,
   showReminder,
@@ -24,7 +30,8 @@ import {
 } from '../store/hubThunks.js'
 
 /** Everything a page needs from the hub — a thin layer over the Redux store.
- *    store        { live, history, settings } — read it with selectors.js
+ *    store        { live, history, notifications, notificationsMore, unread,
+ *                   settings } — read it with selectors.js
  *    detail, sheet, sheetBusy, sheetError, toast, banner, remindOpen, push
  *    and the actions below. The actions keep the same identity between
  *    renders, so they are safe to use inside effects.
@@ -45,6 +52,15 @@ export function useHub() {
       closeDetail: () => dispatch(detailClosed()),
       confirmSheet: (reason) => dispatch(confirmSheet(reason)),
       clearToast: () => dispatch(toastCleared()),
+
+      // Notifications: the first page again, the next page, and the changes
+      // (each resolves to true when the server accepted it)
+      reloadNotifications: () => dispatch(reloadNotifications()),
+      moreNotifications: () => dispatch(moreNotifications()),
+      readNotification: (id) => dispatch(readNotification(id)),
+      readAllNotifications: () => dispatch(readAllNotifications()),
+      removeNotification: (id) => dispatch(removeNotification(id)),
+      removeAllNotifications: () => dispatch(removeAllNotifications()),
 
       toggleSetting: (name) => dispatch(toggleSetting(name)),
       // Asks the browser for permission (if needed) and registers for push

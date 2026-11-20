@@ -29,6 +29,7 @@ import { initials, shortDate } from '../lib/format.js'
 import { PATHS, softwarePath } from '../lib/paths.js'
 import { useHub } from '../state/hubContext.js'
 import { swPending, totalPending } from '../state/selectors.js'
+import NotificationBell from './NotificationBell.jsx'
 import { fonts, RAIL_BG, RAIL_COLLAPSED, RAIL_WIDTH, TOPBAR_HEIGHT } from '../theme/tokens.js'
 
 /* App frame: dark sidebar + top bar on desktop, app bar + bottom tabs on phones. */
@@ -522,13 +523,10 @@ function UserMenu() {
   )
 }
 
-/** Desktop top bar: breadcrumb, date, pending count, user chip. */
+/** Desktop top bar: breadcrumb, date, notifications, user chip. */
 function TopBar() {
   const [group, page] = useCrumbs()
-  const { store } = useHub()
-  const navigate = useNavigate()
   const [today] = useState(() => shortDate(new Date()))
-  const pending = totalPending(store)
 
   return (
     <Box
@@ -561,16 +559,7 @@ function TopBar() {
       <Typography variant="mono" sx={{ fontSize: 11.5, color: 'hub.muted', display: { xs: 'none', lg: 'block' } }}>
         {today}
       </Typography>
-      <IconButton
-        onClick={() => navigate(PATHS.overview)}
-        aria-label={`${pending} approvals pending`}
-        title={`${pending} approvals pending`}
-        sx={{ color: 'hub.muted' }}
-      >
-        <Badge badgeContent={pending} color="error" max={99}>
-          <NotificationsNoneOutlinedIcon />
-        </Badge>
-      </IconButton>
+      <NotificationBell sx={{ color: 'hub.muted' }} />
       <Box sx={{ width: '1px', height: 26, bgcolor: 'divider' }} />
       <UserMenu />
     </Box>
@@ -597,6 +586,8 @@ function PhoneChrome() {
       <AppBar position="sticky" elevation={0} sx={{ background: RAIL_BG, color: 'hub.railInk' }}>
         <Toolbar sx={{ gap: 1.5, justifyContent: 'space-between', minHeight: 60, px: 2 }}>
           <Brand compact />
+          <Box sx={{ flex: 1 }} />
+          <NotificationBell sx={{ color: 'hub.railInk' }} />
           <IconButton onClick={logout} aria-label="Sign out" title="Sign out" sx={{ color: 'hub.railInk' }}>
             <LogoutIcon fontSize="small" />
           </IconButton>

@@ -21,8 +21,6 @@ const SOURCES = [
   { id: 'pace', name: 'PACE' },
   { id: 'tams', name: 'TAMS' },
   { id: 'truflow', name: 'TruFlow' },
-  { id: 'lexes', name: 'LEXES' },
-  { id: 'caxis', name: 'CAXIS' },
 ];
 
 const findSource = (id) => SOURCES.find((s) => s.id === String(id || '').toLowerCase()) || null;

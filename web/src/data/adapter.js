@@ -209,6 +209,27 @@ export function historyFrom(data) {
   }))
 }
 
+/** The notifications answer -> { items, hasMore, unread }, newest first.
+    kind 'arrival' = a new approval reached the CMD; 'reminder' = the
+    15-minute reminder of what was pending. `unread` counts the whole list. */
+export function notificationsFrom(data) {
+  return {
+    items: ((data && data.items) || []).map((n) => ({
+      id: n.id,
+      kind: n.kind === 'reminder' ? 'reminder' : 'arrival',
+      swId: n.software || null,
+      sw: n.software ? SOFTWARE_NAMES[n.software] || n.software : '',
+      ref: n.ref || '',
+      title: n.title || '',
+      body: n.body || '',
+      read: !!n.read,
+      ts: n.at,
+    })),
+    hasMore: !!(data && data.has_more),
+    unread: (data && data.unread) || 0,
+  }
+}
+
 /** A login / me answer -> the session kept in the store */
 export function sessionFrom(token, user) {
   return {

@@ -33,6 +33,9 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+# Release signing: the key and its passwords stay off git
+*.jks
+key.properties
 .kotlin/
 
 # node.js

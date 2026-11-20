@@ -116,20 +116,6 @@ export const REGISTRY = [
     sub: 'Accounts receivable',
     planned: ['Credit-limit exceptions', 'Receivable write-offs'],
   },
-  {
-    id: 'lexes',
-    mono: 'LX',
-    name: 'LEXES',
-    sub: 'Legal management',
-    planned: ['Contracts for signature', 'Legal case decisions'],
-  },
-  {
-    id: 'caxis',
-    mono: 'CX',
-    name: 'CAXIS',
-    sub: 'Company affairs',
-    planned: ['Statutory filings', 'Board and resolution papers'],
-  },
 ];
 
 export const findSoftware = id => REGISTRY.find(sw => sw.id === id);

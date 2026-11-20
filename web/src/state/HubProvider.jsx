@@ -12,6 +12,7 @@ import {
   reload,
   reloadAll,
   reloadHistory,
+  reloadNotifications,
   serverReminder,
   stopTimers,
 } from '../store/hubThunks.js'
@@ -35,6 +36,7 @@ export function HubProvider({ children }) {
     const held = [
       ...CONNECTED.map((sw) => dispatch(api.endpoints.getPending.initiate(sw.id))),
       dispatch(api.endpoints.getHistory.initiate()),
+      dispatch(api.endpoints.getNotifications.initiate()),
     ]
 
     const nudges = {}
@@ -49,13 +51,17 @@ export function HubProvider({ children }) {
       },
       onArrival: (note) => dispatch(arrival(note)),
       onReminder: () => dispatch(serverReminder()),
-      onReconnect: () => dispatch(reloadAll()),
+      onReconnect: () => {
+        dispatch(reloadAll())
+        dispatch(reloadNotifications())
+      },
     })
 
     const onVisible = () => {
       if (document.hidden) return
       dispatch(reloadAll())
       dispatch(reloadHistory())
+      dispatch(reloadNotifications())
       dispatch(refreshPushStatus())
     }
     document.addEventListener('visibilitychange', onVisible)
