@@ -161,7 +161,7 @@ test('several sent up together make one notification, not one each', async () =>
 
 test('the routes need a login, and say so when the connection is not set up', async () => {
   assert.equal((await call('GET', '/api/software/ledgertrace/pending')).status, 401);
-  assert.equal((await call('GET', '/api/software/pace/pending', { headers: authed() })).status, 404);
+  assert.equal((await call('GET', '/api/software/nosuch/pending', { headers: authed() })).status, 404);
   assert.equal((await call('GET', '/api/software/ledgertrace/pending', { headers: authed() })).status, 503);
 });
 

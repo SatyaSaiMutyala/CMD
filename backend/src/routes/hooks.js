@@ -1,5 +1,5 @@
 // Webhooks — the server-to-server side, called by our other projects
-// (LedgerTrace, Sales Pulse 365, PACE …) the moment something changes there.
+// (LedgerTrace, eDOS, AIMS, Sales Pulse 365) the moment something changes there.
 //
 //   POST /api/hooks/:software/changed          X-Api-Key: that software's key
 //

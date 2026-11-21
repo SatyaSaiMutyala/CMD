@@ -34,9 +34,6 @@ const SOURCES = [
     // The two approvals that wait for an admin there, by the key Sales Pulse sends.
     stages: { contract: 'Pending Approval', quote: 'Price Quote Approval' },
   },
-  { id: 'pace', name: 'PACE' },
-  { id: 'tams', name: 'TAMS' },
-  { id: 'truflow', name: 'TruFlow' },
 ];
 
 const findSource = (id) => SOURCES.find((s) => s.id === String(id || '').toLowerCase()) || null;

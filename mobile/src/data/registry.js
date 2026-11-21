@@ -186,28 +186,6 @@ export const REGISTRY = [
       },
     ],
   },
-  {
-    id: 'pace',
-    mono: 'PA',
-    name: 'PACE',
-    sub: 'Payroll and payment reconciliation',
-    planned: ['Payment reconciliation sign-off', 'Worker category exceptions'],
-  },
-  {
-    id: 'tams',
-    mono: 'TA',
-    name: 'TAMS',
-    sub: 'Asset management',
-    planned: ['Asset capitalisation', 'Disposal and write-off'],
-    plannedIcons: ['box', 'trash'],
-  },
-  {
-    id: 'truflow',
-    mono: 'TF',
-    name: 'TruFlow',
-    sub: 'Accounts receivable',
-    planned: ['Credit-limit exceptions', 'Receivable write-offs'],
-  },
 ];
 
 export const findSoftware = id => REGISTRY.find(sw => sw.id === id);

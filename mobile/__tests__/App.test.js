@@ -329,9 +329,9 @@ test('signing in opens the hub with the live pending total from the server', asy
   expect(text).toContain('2pending');
   expect(text).toContain('Start swipe review');
   expect(text).toContain('LedgerTrace');
-  expect(text).toContain('4/7Systems connected');
+  expect(text).toContain('4/4Systems connected');
   expect(text).toContain('eDOS');
-  expect(text).toContain('TruFlow');
+  expect(text).toContain('Sales Pulse 365');
 
   const list = calls.find(c => c.path === '/api/software/ledgertrace/pending');
   expect(list.auth).toBe('Bearer jwt-1');

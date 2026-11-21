@@ -81,7 +81,7 @@ test('protected routes refuse a missing or bad token', async () => {
 test('webhook refuses a wrong key, an unknown source and a source with no key set', async () => {
   assert.equal((await hook({ event: 'new' }, 'wrong')).status, 401);
   assert.equal((await hook({ event: 'new' }, 'lt-test-key', 'nosuch')).status, 401);
-  assert.equal((await hook({ event: 'new' }, '', 'pace')).status, 401);
+  assert.equal((await hook({ event: 'new' }, '', 'aims')).status, 401);
   assert.equal((await hook({ event: 'bogus' })).status, 400);
 });
 
@@ -110,7 +110,7 @@ test('a "new" webhook reaches a subscribed app as a nudge and an arrival; an uns
   const pending = await call('GET', '/api/pending', { headers: authed() });
   assert.equal(pending.json.total, 10);
   assert.equal(pending.json.bySoftware.find((s) => s.software === 'ledgertrace').pending, 10);
-  assert.equal(pending.json.bySoftware.find((s) => s.software === 'pace').pending, null);
+  assert.equal(pending.json.bySoftware.find((s) => s.software === 'aims').pending, null);
 
   const log = await call('GET', '/api/notifications', { headers: authed() });
   assert.equal(log.json.items[0].ref, 'ADS-2026-1317');
