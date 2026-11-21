@@ -192,7 +192,7 @@ const fromSalesPulse = (card) => {
   }
 }
 
-/* One Trust Prism asset -> one approval item. The same asset moves through
+/* One TrustMark asset -> one approval item. The same asset moves through
    two tabs, and what the buttons do depends on the tab it is in:
      draft    Send for approval, or leave Feedback (it stays a draft)
      review   Approve, or Send back to the Version Tracker
@@ -378,7 +378,7 @@ const detailFromSalesPulse = (item) => {
   }
 }
 
-/* One Trust Prism asset in full -> what the details view shows: the file
+/* One TrustMark asset in full -> what the details view shows: the file
    itself (shown in place where it can be), where it is filed and how it may
    be used, every file in its history, and the feedback thread. */
 const detailFromPrism = (item) => ({
@@ -392,7 +392,7 @@ const detailFromPrism = (item) => ({
     ...(item.facts || []).map((f) => [f.label, f.value]),
   ],
   notes: '',
-  // the current file, straight from Trust Prism's storage: kind, url, poster
+  // the current file, straight from TrustMark's storage: kind, url, poster
   preview: item.preview || null,
   documentsTitle: 'Files and revisions',
   documents: (item.documents || []).map((d) => ({

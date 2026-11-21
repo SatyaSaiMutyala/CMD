@@ -530,7 +530,7 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
   });
 });
 
-test('a Trust Prism asset: two tabs, the file shown in place, a zip looked inside', async () => {
+test('a TrustMark asset: two tabs, the file shown in place, a zip looked inside', async () => {
   const { pendingFrom, detailFrom } = require('../src/data/adapter');
   const { zipEntryId } = require('../src/components/overlays/ZipList');
   const card = {

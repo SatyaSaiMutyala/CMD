@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 
-/* The file itself, shown in place — the way the Trust Prism drawer shows it:
+/* The file itself, shown in place — the way the TrustMark drawer shows it:
      image   the picture (click for full size)
      pdf     the document, paged in an embedded viewer, with "Open full screen"
      video   a player, with the still as its poster

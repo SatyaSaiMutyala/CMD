@@ -36,8 +36,8 @@ const SOURCES = [
   },
   {
     id: 'prism',
-    name: 'Trust Prism',
-    // The CMD's two tabs there, by the key Trust Prism sends.
+    name: 'TrustMark',
+    // The CMD's two tabs there, by the key TrustMark sends.
     stages: { draft: 'Version Tracker', review: 'Approval' },
   },
 ];

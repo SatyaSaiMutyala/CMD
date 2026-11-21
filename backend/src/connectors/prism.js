@@ -1,21 +1,21 @@
-// Trust Prism — the brand asset library. The CMD is the Super Admin there, so
+// TrustMark — the brand asset library. The CMD is the Super Admin there, so
 // the hub shows the two places an asset waits before it is approved, read and
-// decided through Trust Prism's own /api/cmdhub/* endpoints. See
+// decided through TrustMark's own /api/cmdhub/* endpoints. See
 // backend/src/controllers/cmdHubController.js in the Trust-Prism project.
 //
 //   draft    Version Tracker   send for approval, or leave feedback
 //   review   Approval          approve, or send back to the Version Tracker
 //
-// Publishing an approved asset is done in Trust Prism itself.
+// Publishing an approved asset is done in TrustMark itself.
 //
 // FILES. An asset is a file, and often a large one (films, layered artwork), so
-// nothing is passed through this server: Trust Prism hands out short-lived
+// nothing is passed through this server: TrustMark hands out short-lived
 // links straight to its storage, and a document is opened by sending the
 // browser to one. A document id is "master" (the current file) or "v2r3"
 // (version 2, revision 3); "<id>!save" asks for it as a download.
 //
 // A zip can be looked inside without downloading it (`contents`), and one
-// file opened out of it: that one is small and read by Trust Prism, so it
+// file opened out of it: that one is small and read by TrustMark, so it
 // does come through here as bytes. Its document id is
 // "zip~<the zip's id>~<base64url of the path inside>".
 //
@@ -31,7 +31,7 @@ class SourceError extends Error {
   }
 }
 
-const NAME = 'Trust Prism';
+const NAME = 'TrustMark';
 const configured = () => Boolean(env.prism.url && env.prism.key);
 const base = () => env.prism.url.replace(/\/+$/, '');
 

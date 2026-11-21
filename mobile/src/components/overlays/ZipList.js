@@ -6,7 +6,7 @@ import { AppText, Eyebrow } from '../common';
 import { Icon } from '../icons';
 
 /* What is inside a zip, read where it is stored — the archive itself is never
-   downloaded — the way Trust Prism's own zip browser lists it. Tapping a
+   downloaded — the way TrustMark's own zip browser lists it. Tapping a
    picture, a PDF or a text file opens it; anything else is saved. Password-
    protected entries are listed but cannot be opened.
 

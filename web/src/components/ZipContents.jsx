@@ -9,7 +9,7 @@ import { useGetContentsQuery } from '../store/api.js'
 import { fonts } from '../theme/tokens.js'
 
 /* What is inside a zip, read where it is stored — the archive itself is never
-   downloaded — the way Trust Prism's own zip browser lists it. A picture, a
+   downloaded — the way TrustMark's own zip browser lists it. A picture, a
    PDF or a text file opens in a new tab; anything else is saved. Password-
    protected entries are listed but cannot be opened.
 

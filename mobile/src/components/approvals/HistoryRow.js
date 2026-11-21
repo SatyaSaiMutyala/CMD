@@ -11,7 +11,7 @@ const MARKS = {
   // AIMS's first sign-off; marked as an approval
   Verified: { style: 'yellow', icon: 'check', stroke: 2.8, size: 20 },
   Released: { style: 'teal', rupee: true },
-  // Trust Prism: made Live, sent on for approval, feedback left
+  // TrustMark: made Live, sent on for approval, feedback left
   Published: { style: 'yellow', icon: 'check', stroke: 2.8, size: 20 },
   'Sent for approval': { style: 'ring', icon: 'arrowRight', stroke: 2.4, size: 19 },
   Commented: { style: 'mint', icon: 'info', stroke: 2.2, size: 19 },

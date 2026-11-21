@@ -10,7 +10,7 @@
 //   POST /api/software/:software/items/:code/files/:docId/link   -> { url }
 //          a link that opens one attached document, good for two minutes
 //   GET  /api/software/:software/items/:code/files/:docId/contents
-//          what is inside a zip, where the source can look (Trust Prism)
+//          what is inside a zip, where the source can look (TrustMark)
 //
 // Every action carries the stage the app believes the item is at; the source
 // refuses it (409) if the item has moved since, so a double tap cannot act twice.

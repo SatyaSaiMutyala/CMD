@@ -74,7 +74,7 @@ const KINDS = {
       stage.rejectFine ||
       'Returns the invoice all the way to the desk that registered it. Logged against your name.',
     // a stage's own words where its second choice is not a rejection
-    // (Trust Prism's Version Tracker: feedback)
+    // (TrustMark's Version Tracker: feedback)
     slide: stage.rejectSlide || 'Slide to reject',
     busy: stage.rejectBusy || 'Rejecting…',
     tone: 'return',

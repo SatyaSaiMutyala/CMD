@@ -8,7 +8,7 @@
 // can be opened in a plain browser tab without exposing anything else.
 // The file is fetched from the source project with that project's key and
 // passed straight through; nothing is stored here. A source that keeps its
-// files in storage of its own (Trust Prism: large assets) says where the
+// files in storage of its own (TrustMark: large assets) says where the
 // document is instead, and the browser is sent straight there.
 const express = require('express');
 const jwt = require('jsonwebtoken');

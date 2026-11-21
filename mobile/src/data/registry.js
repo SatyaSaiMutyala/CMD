@@ -188,13 +188,13 @@ export const REGISTRY = [
   },
   {
     id: 'prism',
-    mono: 'TP',
-    name: 'Trust Prism',
+    mono: 'TM',
+    name: 'TrustMark',
     sub: 'Brand assets, approvals and governance',
     connected: true,
     // The two places an asset waits there before it is approved: the Version
     // Tracker first, then Approval. Publishing an approved asset is done in
-    // Trust Prism itself.
+    // TrustMark itself.
     stages: [
       {
         // Work still being revised. Read every revision, say what should
@@ -211,7 +211,7 @@ export const REGISTRY = [
         approveBusy: 'Sending…',
         approveTitle: 'SEND FOR APPROVAL',
         approveFine:
-          'Sends this asset for approval in Trust Prism. It moves to Approval, where you approve it or send it back.',
+          'Sends this asset for approval in TrustMark. It moves to Approval, where you approve it or send it back.',
         approveDone: 'It is now in Approval.',
         rejectTitle: 'LEAVE FEEDBACK',
         rejectTo: 'Stays in the Version Tracker',
@@ -235,8 +235,8 @@ export const REGISTRY = [
         approveSlide: 'Slide to approve',
         approveBusy: 'Approving…',
         approveFine:
-          'Approves this asset in Trust Prism. Publishing it is done there. Logged against your name.',
-        approveDone: 'It is approved in Trust Prism.',
+          'Approves this asset in TrustMark. Publishing it is done there. Logged against your name.',
+        approveDone: 'It is approved in TrustMark.',
       },
     ],
   },

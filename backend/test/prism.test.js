@@ -1,7 +1,7 @@
-// Trust Prism: the message it sends us when an asset is sent for approval, and
+// TrustMark: the message it sends us when an asset is sent for approval, and
 // the routes the apps call — including its files, which the browser fetches
-// straight from Trust Prism's storage. Real server, real socket, in-memory
-// MongoDB, and a stand-in for Trust Prism.
+// straight from TrustMark's storage. Real server, real socket, in-memory
+// MongoDB, and a stand-in for TrustMark.
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret';
 process.env.HOOK_KEY_PRISM = 'prism-hook-key';
@@ -45,7 +45,7 @@ const connect = () =>
   });
 const settle = () => new Promise((r) => setTimeout(r, 300));
 
-// A stand-in for Trust Prism's /api/cmdhub/*: answers in its formats and
+// A stand-in for TrustMark's /api/cmdhub/*: answers in its formats and
 // records what it was sent.
 const ID = '6b013f9fb759e728085b66ee';
 const CARD = {
@@ -142,12 +142,12 @@ const openLink = async (docId) => {
   return fetch(link.json.url.replace(/^https?:\/\/[^/]+/, base), { redirect: 'manual' });
 };
 
-test('until Trust Prism is set up here, its routes say so instead of failing', async () => {
+test('until TrustMark is set up here, its routes say so instead of failing', async () => {
   env.prism.url = '';
   env.prism.key = '';
   const res = await call('GET', '/api/software/prism/pending', { headers: authed() });
   assert.equal(res.status, 503);
-  assert.match(res.json.message, /Trust Prism is not connected/);
+  assert.match(res.json.message, /TrustMark is not connected/);
 });
 
 test('the tabs and one asset are forwarded; the reminder counts only what waits for a decision', async () => {
@@ -167,7 +167,7 @@ test('the tabs and one asset are forwarded; the reminder counts only what waits 
   assert.equal(one.json.item.preview.kind, 'zip');
 });
 
-test('a file opens straight from Trust Prism\'s storage: the link sends the browser there', async () => {
+test('a file opens straight from TrustMark\'s storage: the link sends the browser there', async () => {
   const res = await openLink('v1r1');
   assert.equal(res.status, 302);
   assert.equal(res.headers.get('location'), STORAGE);
@@ -236,5 +236,5 @@ test('an asset sent for approval rings; an upload landing in the Version Tracker
   const arrival = events.find((e) => e.name === 'hub:arrival');
   assert.ok(arrival, 'the app is told a new approval arrived');
   assert.equal(arrival.payload.title, 'New approval');
-  assert.equal(arrival.payload.body, 'Leaflet · Trust Prism · Approval');
+  assert.equal(arrival.payload.body, 'Leaflet · TrustMark · Approval');
 });
