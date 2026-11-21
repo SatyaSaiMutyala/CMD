@@ -68,7 +68,7 @@ class MainApplication : Application(), ReactApplication {
       channel(
         "reminders_v1",
         "Pending reminders",
-        "Every 15 minutes while approvals are waiting",
+        "At the interval you choose, while approvals are waiting",
         R.raw.reminder,
       )
     )

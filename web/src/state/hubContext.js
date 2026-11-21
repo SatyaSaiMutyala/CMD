@@ -22,6 +22,8 @@ import {
   reloadNotifications,
   removeAllNotifications,
   removeNotification,
+  saveDnd,
+  saveReminderMinutes,
   selectHubStore,
   selectOnlyPending,
   showReminder,
@@ -63,6 +65,10 @@ export function useHub() {
       removeNotification: (id) => dispatch(removeNotification(id)),
       removeAllNotifications: () => dispatch(removeAllNotifications()),
 
+      // Do not disturb for the reminder: any of { on, daily, from, to }
+      saveDnd: (change) => dispatch(saveDnd(change)),
+      // How often the reminder comes, in minutes
+      saveReminderMinutes: (minutes) => dispatch(saveReminderMinutes(minutes)),
       toggleSetting: (name) => dispatch(toggleSetting(name)),
       // Asks the browser for permission (if needed) and registers for push
       enablePush: () => dispatch(enablePush(true)),

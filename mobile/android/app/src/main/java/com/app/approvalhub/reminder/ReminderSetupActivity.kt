@@ -56,7 +56,7 @@ class ReminderSetupActivity : Activity() {
     column.addView(text("Full-screen reminder", 24f, INK, bold = true))
     column.addView(
       text(
-        "Every 15 minutes, while approvals are waiting, the reminder can take over the " +
+        "At the interval you choose, while approvals are waiting, the reminder can take over the " +
           "screen like an alarm. Android needs your permission for that in two places.",
         15f, MUTED,
       ).apply { setPadding(0, dp(8), 0, dp(16)) })

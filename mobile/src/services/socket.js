@@ -25,6 +25,8 @@ export function openHubSocket(token, handlers) {
   socket.on('hub:changed', p => handlers.onChanged && handlers.onChanged(p || {}));
   socket.on('hub:arrival', p => handlers.onArrival && handlers.onArrival(p || {}));
   socket.on('hub:reminder', p => handlers.onReminder && handlers.onReminder(p || {}));
+  // a setting was changed on another device
+  socket.on('hub:settings', p => handlers.onSettings && handlers.onSettings(p || {}));
 
   return () => {
     socket.removeAllListeners();

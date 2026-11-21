@@ -38,7 +38,10 @@ import {
   deleteNotification,
   reloadHistory,
   reloadNotifications,
+  reloadSettings,
   reviewNow,
+  saveDnd,
+  saveReminderMinutes,
   selectHubStore,
   sendPushToken,
   serverReminder,
@@ -73,6 +76,7 @@ export function HubProvider({ children }) {
       ),
       dispatch(api.endpoints.getHistory.initiate()),
       dispatch(api.endpoints.getNotifications.initiate()),
+      dispatch(api.endpoints.getSettings.initiate()),
     ];
 
     const nudges = {};
@@ -87,9 +91,12 @@ export function HubProvider({ children }) {
       },
       onArrival: note => dispatch(arrival(note)),
       onReminder: () => dispatch(serverReminder()),
+      // do not disturb was changed on the website (or another phone)
+      onSettings: () => dispatch(reloadSettings()),
       onReconnect: () => {
         dispatch(reloadAll());
         dispatch(reloadNotifications());
+        dispatch(reloadSettings());
       },
     });
 
@@ -98,6 +105,7 @@ export function HubProvider({ children }) {
         dispatch(reloadAll());
         dispatch(reloadHistory());
         dispatch(reloadNotifications());
+        dispatch(reloadSettings());
       }
     });
 
@@ -199,6 +207,10 @@ export function useHub() {
       openDetail: (swId, stage, id) =>
         dispatch(detailOpened({ swId, stage, id })),
       closeDetail: () => dispatch(detailClosed()),
+      // Do not disturb for the reminder: any of { on, daily, from, to }
+      saveDnd: change => dispatch(saveDnd(change)),
+      // How often the reminder comes, in minutes
+      saveReminderMinutes: minutes => dispatch(saveReminderMinutes(minutes)),
       // `photo`: the live selfie, where the decision needs one
       confirmSheet: (reason, photo) => dispatch(confirmSheet(reason, photo)),
       clearToast: () => dispatch(toastCleared()),

@@ -530,6 +530,50 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
   });
 });
 
+test('do not disturb: quiet now, or quiet hours every day that may run past midnight', () => {
+  const { isQuiet, clockLabel, quietStatus } = require('../src/utils/quiet');
+  // 09:00 in India is 03:30 UTC
+  const india = hhmm => {
+    const [h, m] = hhmm.split(':').map(Number);
+    return new Date(Date.UTC(2026, 10, 21, h, m) - 330 * 60 * 1000);
+  };
+  const night = { daily: true, from: '22:00', to: '07:00', tz: 'Asia/Kolkata' };
+  expect(isQuiet(night, india('21:59'))).toBe(false);
+  expect(isQuiet(night, india('22:00'))).toBe(true);
+  expect(isQuiet(night, india('03:00'))).toBe(true);
+  expect(isQuiet(night, india('07:00'))).toBe(false);
+  // the hours can be changed to anything, inside one day too
+  const rest = { daily: true, from: '13:00', to: '15:30', tz: 'Asia/Kolkata' };
+  expect(isQuiet(rest, india('14:00'))).toBe(true);
+  expect(isQuiet(rest, india('15:30'))).toBe(false);
+  // switched off; and "do not disturb now" whatever the clock says
+  expect(isQuiet({ ...night, daily: false }, india('23:00'))).toBe(false);
+  expect(isQuiet({ on: true }, india('12:00'))).toBe(true);
+  expect(isQuiet(undefined)).toBe(false);
+
+  // how often the reminder comes reads the same wherever it is shown
+  const { everyLabel, everyShort } = require('../src/utils/quiet');
+  expect([15, 60, 90, 120].map(everyLabel)).toEqual([
+    '15 minutes',
+    '1 hour',
+    '1 hour 30 minutes',
+    '2 hours',
+  ]);
+  expect([15, 60, 90].map(everyShort)).toEqual(['15 min', '1 hr', '1 hr 30 min']);
+
+  expect(clockLabel('22:00')).toBe('10:00 pm');
+  expect(clockLabel('07:05')).toBe('7:05 am');
+  expect(clockLabel('00:30')).toBe('12:30 am');
+  expect(quietStatus(night, india('23:00'))).toEqual([
+    true,
+    'Quiet hours now. Reminders start again at 7:00 am.',
+  ]);
+  expect(quietStatus(night, india('12:00'))).toEqual([
+    false,
+    'Quiet every day from 10:00 pm to 7:00 am.',
+  ]);
+});
+
 test('a TrustMark asset: two tabs, the file shown in place, a zip looked inside', async () => {
   const { pendingFrom, detailFrom } = require('../src/data/adapter');
   const { zipEntryId } = require('../src/components/overlays/ZipList');

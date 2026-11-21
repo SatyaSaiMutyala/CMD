@@ -6,6 +6,7 @@ import { useHub } from '../../store/HubProvider';
 import { swPending, totalPending } from '../../store/selectors';
 import { colors, ms, mvs, s, shadows } from '../../theme';
 import { clockParts, weekdayDate } from '../../utils/format';
+import { everyLabel } from '../../utils/quiet';
 import { AppText, Button, Eyebrow, Mono, Ring } from '../common';
 import { Icon } from '../icons';
 
@@ -126,7 +127,7 @@ export default function ReminderOverlay() {
               weight={700}
               icon="clock"
               iconStroke={2.2}
-              label="Remind me in 15 minutes"
+              label={`Remind me in ${everyLabel(store.reminder.minutes)}`}
               onPress={snoozeReminder}
             />
             <Button

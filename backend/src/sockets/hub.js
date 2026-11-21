@@ -4,10 +4,12 @@
 // in `hub:subscribe`, and joins the room only if that token belongs to an
 // active user — the room is decided here, never by the client.
 //
-// Three events go out:
+// Four events go out:
 //   hub:changed   { software, stage, at }      something moved; refetch that software
 //   hub:arrival   { ...notification }          a new approval: chime + snackbar
 //   hub:reminder  { total, bySoftware, at }    the 15-minute reminder: full screen
+//   hub:settings  { at }                       the CMD changed a setting on
+//                                              another device: read it again
 //
 // `hub:changed` carries no rows on purpose. The apps refetch over the ordinary
 // REST routes, so every access rule stays in one place.

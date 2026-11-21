@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import { keyframes } from '@mui/material/styles'
 import { REGISTRY } from '../data/registry.js'
 import { clockTime } from '../lib/format.js'
+import { everyLabel } from '../lib/quiet.js'
 import { useHub } from '../state/hubContext.js'
 import { swPending, totalPending } from '../state/selectors.js'
 import { fonts, RAIL_BG } from '../theme/tokens.js'
@@ -107,7 +108,7 @@ export default function Reminder() {
           onClick={snoozeReminder}
           sx={{ mt: 1.5, minHeight: 48, color: '#fff', bgcolor: 'rgba(255,255,255,.12)', borderRadius: '12px', '&:hover': { bgcolor: 'rgba(255,255,255,.2)' } }}
         >
-          Remind me in 15 minutes
+          Remind me in {everyLabel(store.reminder.minutes)}
         </Button>
         <Button onClick={dismissReminder} sx={{ mt: 1.5, color: 'hub.railMuted', textDecoration: 'underline', '&:hover': { bgcolor: 'transparent', color: '#fff' } }}>
           Dismiss

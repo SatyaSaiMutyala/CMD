@@ -13,6 +13,7 @@ import {
   reloadAll,
   reloadHistory,
   reloadNotifications,
+  reloadSettings,
   serverReminder,
   stopTimers,
 } from '../store/hubThunks.js'
@@ -37,6 +38,7 @@ export function HubProvider({ children }) {
       ...CONNECTED.map((sw) => dispatch(api.endpoints.getPending.initiate(sw.id))),
       dispatch(api.endpoints.getHistory.initiate()),
       dispatch(api.endpoints.getNotifications.initiate()),
+      dispatch(api.endpoints.getSettings.initiate()),
     ]
 
     const nudges = {}
@@ -51,9 +53,12 @@ export function HubProvider({ children }) {
       },
       onArrival: (note) => dispatch(arrival(note)),
       onReminder: () => dispatch(serverReminder()),
+      // do not disturb was changed on the phone (or another tab)
+      onSettings: () => dispatch(reloadSettings()),
       onReconnect: () => {
         dispatch(reloadAll())
         dispatch(reloadNotifications())
+        dispatch(reloadSettings())
       },
     })
 
@@ -62,6 +67,7 @@ export function HubProvider({ children }) {
       dispatch(reloadAll())
       dispatch(reloadHistory())
       dispatch(reloadNotifications())
+      dispatch(reloadSettings())
       dispatch(refreshPushStatus())
     }
     document.addEventListener('visibilitychange', onVisible)

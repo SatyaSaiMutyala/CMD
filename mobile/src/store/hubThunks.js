@@ -4,6 +4,12 @@ import { REGISTRY, findSoftware } from '../data/registry';
 import { openHome, openSoftware } from '../navigation/navigationRef';
 import { buzz, chime } from '../services/feedback';
 import { registerForPush, registeredPushToken } from '../services/push';
+import {
+  DND_DEFAULTS,
+  REMINDER_DEFAULT,
+  deviceZone,
+  isQuiet,
+} from '../utils/quiet';
 import { api } from './api';
 import {
   bannerCleared,
@@ -28,7 +34,6 @@ import { swPending, totalPending, visibleItems } from './selectors';
    and dispatches the slice actions in hubSlice.js. */
 
 export const CONNECTED = REGISTRY.filter(sw => sw.connected);
-const SNOOZE_MS = 15 * 60 * 1000;
 export const BANNER_MS = 6000;
 
 // What each sheet type sends to the server, and how it reads afterwards
@@ -67,10 +72,12 @@ export const selectHubStore = createSelector(
     ...CONNECTED.map(sw => api.endpoints.getPending.select(sw.id)),
     api.endpoints.getHistory.select(),
     api.endpoints.getNotifications.select(),
+    api.endpoints.getSettings.select(),
     state => state.hub.settings,
   ],
   (...parts) => {
     const settings = parts.pop();
+    const account = parts.pop();
     const notifications = parts.pop();
     const history = parts.pop();
     const live = {};
@@ -88,6 +95,10 @@ export const selectHubStore = createSelector(
       // more pages on the server, and how many in the whole list are unread
       notificationsMore: !!(notifications.data && notifications.data.hasMore),
       unread: notifications.data ? notifications.data.unread : 0,
+      // do not disturb for the reminder, kept on the account (utils/quiet.js)
+      dnd: (account.data && account.data.dnd) || DND_DEFAULTS,
+      // how often the reminder comes: { minutes, min, max }
+      reminder: (account.data && account.data.reminder) || REMINDER_DEFAULT,
       settings,
     };
   },
@@ -116,6 +127,38 @@ export const reloadAll = () => dispatch =>
 
 export const reloadHistory = () => dispatch =>
   dispatch(fetchNow('getHistory', undefined));
+
+/** The account's settings again (changed on another device) */
+export const reloadSettings = () => dispatch =>
+  dispatch(fetchNow('getSettings', undefined));
+
+// Is the reminder held back right now? Read from what the server last said.
+const quietNow = state => isQuiet(selectHubStore(state).dnd);
+
+/** Set how often the reminder comes, in minutes. Resolves to true when the
+    server accepted it. */
+export const saveReminderMinutes = minutes => async dispatch => {
+  try {
+    await dispatch(api.endpoints.saveReminder.initiate(minutes)).unwrap();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+/** Change do not disturb: any of { on, daily, from, to }. Resolves to true
+    when the server accepted it. The phone's time zone goes with it, so the
+    quiet hours are read on the clock the CMD is looking at. */
+export const saveDnd = change => async dispatch => {
+  try {
+    await dispatch(
+      api.endpoints.saveDnd.initiate({ ...change, tz: deviceZone() }),
+    ).unwrap();
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
 
 /** The first page of notifications again (newer ones appear at the top) */
 export const reloadNotifications = () => dispatch =>
@@ -186,6 +229,8 @@ export const showReminder = force => (dispatch, getState) => {
 export const serverReminder = () => async (dispatch, getState) => {
   dispatch(reloadNotifications());
   if (!getState().hub.settings.hourly) return;
+  // Do not disturb: the screen is left alone
+  if (quietNow(getState())) return;
   await dispatch(reloadAll());
   dispatch(showReminder());
 };
@@ -194,8 +239,11 @@ export const snoozeReminder = () => (dispatch, getState) => {
   dispatch(reminderClosed());
   clearTimeout(snoozeTimer);
   snoozeTimer = setTimeout(() => {
-    if (getState().hub.settings.hourly) dispatch(showReminder());
-  }, SNOOZE_MS);
+    if (getState().hub.settings.hourly && !quietNow(getState())) {
+      dispatch(showReminder());
+    }
+    // "Remind me in …" waits one more of the CMD's own intervals
+  }, selectHubStore(getState()).reminder.minutes * 60 * 1000);
 };
 
 export const reviewNow = () => (dispatch, getState) => {

@@ -262,6 +262,57 @@ export const api = createApi({
         }),
     }),
 
+    /* ---- settings ---- */
+    // The CMD's settings, kept on the account:
+    // { reminder: { minutes, min, max }, dnd: { on, daily, from, to, tz }, quiet }
+    getSettings: build.query({
+      query: () => '/api/settings',
+    }),
+    // How often the reminder comes, in minutes. Moves at once; goes back if
+    // the server refuses.
+    saveReminder: build.mutation({
+      query: minutes => ({
+        url: '/api/settings/reminder',
+        method: 'PUT',
+        body: { minutes },
+      }),
+      onQueryStarted: async (minutes, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          api.util.updateQueryData('getSettings', undefined, settings => {
+            settings.reminder = { ...(settings.reminder || {}), minutes };
+          }),
+        );
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(api.util.updateQueryData('getSettings', undefined, () => data));
+        } catch (e) {
+          patch.undo();
+        }
+      },
+    }),
+    // Do not disturb: only the fields given are changed. The switch moves at
+    // once and goes back if the server refuses.
+    saveDnd: build.mutation({
+      query: change => ({
+        url: '/api/settings/dnd',
+        method: 'PUT',
+        body: change,
+      }),
+      onQueryStarted: async (change, { dispatch, queryFulfilled }) => {
+        const patch = dispatch(
+          api.util.updateQueryData('getSettings', undefined, settings => {
+            Object.assign(settings.dnd, change);
+          }),
+        );
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(api.util.updateQueryData('getSettings', undefined, () => data));
+        } catch (e) {
+          patch.undo();
+        }
+      },
+    }),
+
     /* ---- push notifications ---- */
     // `reminders` = this phone's "reminder every 15 minutes" switch; when it
     // is false the server does not send the reminder here

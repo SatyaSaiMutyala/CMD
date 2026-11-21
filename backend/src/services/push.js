@@ -121,19 +121,23 @@ const sendToBrowsers = async (devices, message) => {
 };
 
 // Who gets a push of this kind: everyone, except that the 15-minute reminder
-// skips devices where the CMD has switched it off.
-const devicesFor = (kind, devices) => (kind === 'reminder' ? devices.filter((d) => d.reminders !== false) : devices);
+// skips devices where the CMD has switched it off, and every device of a
+// person who is in do-not-disturb (`quietUsers`: their ids, as strings).
+const devicesFor = (kind, devices, quietUsers = new Set()) =>
+  kind === 'reminder'
+    ? devices.filter((d) => d.reminders !== false && !quietUsers.has(String(d.user)))
+    : devices;
 
 /**
  * Send one push to every registered device.
- * @param {{kind:'arrival'|'reminder', title:string, body:string, data?:object}} message
+ * @param {{kind:'arrival'|'reminder', title:string, body:string, data?:object, quietUsers?:Set<string>}} message
  * @returns {Promise<number>} how many devices accepted it
  */
 const sendPush = async (message) => {
   if (!messaging && !webpush) return 0;
   const full = { data: {}, ...message };
   try {
-    const devices = devicesFor(full.kind, await Device.find().lean());
+    const devices = devicesFor(full.kind, await Device.find().lean(), full.quietUsers);
     const [phones, browsers] = await Promise.all([
       sendToPhones(devices.filter((d) => d.platform !== 'web'), full),
       sendToBrowsers(devices.filter((d) => d.platform === 'web'), full),

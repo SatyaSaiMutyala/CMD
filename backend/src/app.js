@@ -26,6 +26,7 @@ app.use('/api/devices', require('./routes/devices'));
 app.use('/api/hooks', require('./routes/hooks'));
 app.use('/api/files', require('./routes/files'));
 app.use('/api/software', require('./routes/software'));
+app.use('/api/settings', require('./routes/settings'));
 app.use('/api', require('./routes/hub'));
 
 app.use((req, res) => res.status(404).json({ message: 'Not found' }));
