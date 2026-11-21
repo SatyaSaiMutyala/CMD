@@ -136,7 +136,63 @@ const fromAims = (card) => {
   }
 }
 
-const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos, aims: fromAims }
+/* One item from Sales Pulse -> one approval item. Two kinds share the list:
+   a contract in Pending Approval (the client has signed; it is approved and
+   signed, or sent back) and a pricing request (approved or rejected). */
+const fromSalesPulse = (card) => {
+  const sent = shortDay(card.at)
+  const due = sent ? `Sent ${sent}` : ''
+  if (card.kind === 'contract') {
+    const headline = card.amount_text || 'Contract'
+    return {
+      id: card.id,
+      ref: card.ref,
+      stage: card.stage,
+      note: `${card.signed} of ${card.signatories} client ${card.signatories === 1 ? 'signatory has' : 'signatories have'} signed`,
+      party: card.name || card.title,
+      amount: headline,
+      balance: '',
+      decides: headline,
+      // Approving signs it, and Sales Pulse asks for a live selfie to do that
+      auto: 'Approving signs the contract as Party One, with your live selfie.',
+      needsSelfie: !!card.needs_selfie,
+      tags: ['CONTRACT', (card.type || '').toUpperCase()].filter(Boolean),
+      type: card.title || 'Contract',
+      due,
+      dueLong: due,
+      overdue: false,
+      approve: 'Approve',
+      canReject: false,
+      canSendBack: true,
+    }
+  }
+  const headline = card.amount_text || 'Pricing request'
+  return {
+    id: card.id,
+    ref: card.ref,
+    stage: card.stage,
+    note: card.by ? `Raised by ${card.by}` : '',
+    party: card.name || 'Pricing request',
+    amount: headline,
+    balance: '',
+    decides: headline,
+    auto: card.variant || '',
+    tags: [
+      (card.type || '').toUpperCase(),
+      card.line_count ? `${card.line_count} ${card.line_count === 1 ? 'TEST' : 'TESTS'}` : '',
+      card.code && card.code !== 'N/A' ? card.code : '',
+    ].filter(Boolean),
+    type: 'Pricing request',
+    due,
+    dueLong: due,
+    overdue: false,
+    approve: 'Approve',
+    canReject: true,
+    canSendBack: false,
+  }
+}
+
+const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos, aims: fromAims, sp365: fromSalesPulse }
 
 /** One software's pending answer ->
     { total, stages: { [key]: { count, valueText, items } } } */
@@ -251,7 +307,38 @@ const detailFromAims = (item) => {
   }
 }
 
-const DETAIL_MAPPERS = { ledgertrace: detailFromLedgerTrace, edos: detailFromEdos, aims: detailFromAims }
+/* One Sales Pulse item in full -> what the details view shows: its own
+   fields, then for a pricing request each test with the price listed and the
+   price asked. A contract carries the contract itself, as a PDF. */
+const detailFromSalesPulse = (item) => {
+  const lines = (item.lines || []).map((text, i) => [`Test ${i + 1}`, text])
+  return {
+    id: item.id,
+    ref: item.ref,
+    party: item.name || item.title || '',
+    stageName: item.stage_name,
+    factsTitle: 'Details',
+    facts: [...(item.facts || []).map((f) => [f.label, f.value]), ...lines],
+    notes: item.notes || '',
+    documents: (item.documents || []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      group: d.group || '',
+      size: d.size || '',
+      source: d.source || '',
+    })),
+    documentsNote: item.kind === 'contract' ? 'Read the contract before you sign it: approving applies your signature to every page.' : '',
+    activity: (item.activity || []).slice(0, 8).map((a) => ({ at: a.at, who: a.who, msg: a.msg })),
+    canSendBack: item.kind === 'contract',
+  }
+}
+
+const DETAIL_MAPPERS = {
+  ledgertrace: detailFromLedgerTrace,
+  edos: detailFromEdos,
+  aims: detailFromAims,
+  sp365: detailFromSalesPulse,
+}
 
 /** One item's full answer -> { id, party, facts, factsTitle?, notes, documents, activity }
     Each source names the item differently in its answer. */

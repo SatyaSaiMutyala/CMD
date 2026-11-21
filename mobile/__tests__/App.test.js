@@ -11,6 +11,10 @@ import { sessionSet } from '../src/store/authSlice';
 import { changePassword } from '../src/store/authThunks';
 import { makeStore } from '../src/store/store';
 
+// The camera is native: the tests answer for it
+jest.mock('react-native-image-picker', () => ({
+  launchCamera: jest.fn(),
+}));
 jest.mock(
   'react-native-safe-area-context',
   () => require('react-native-safe-area-context/jest/mock').default,
@@ -325,7 +329,7 @@ test('signing in opens the hub with the live pending total from the server', asy
   expect(text).toContain('2pending');
   expect(text).toContain('Start swipe review');
   expect(text).toContain('LedgerTrace');
-  expect(text).toContain('3/7Systems connected');
+  expect(text).toContain('4/7Systems connected');
   expect(text).toContain('eDOS');
   expect(text).toContain('TruFlow');
 
@@ -524,6 +528,107 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
     dueLong: '4 days overdue',
     overdue: true,
   });
+});
+
+test('a Sales Pulse contract is signed with a live selfie; a price quote is approved or rejected', async () => {
+  const { pendingFrom, detailFrom } = require('../src/data/adapter');
+  const contract = {
+    id: 'c-7',
+    stage: 'contract',
+    kind: 'contract',
+    ref: 'TL/SP/2026/0007',
+    name: 'SUNRISE DIAGNOSTICS',
+    title: 'Lab Services Agreement',
+    type: 'Service agreement',
+    signed: 1,
+    signatories: 1,
+    at: '2026-11-20T10:00:00+05:30',
+    amount_text: '₹5,00,000',
+    needs_selfie: true,
+  };
+  const quote = {
+    id: 'q-42',
+    stage: 'quote',
+    kind: 'quote',
+    ref: 'PRQ-2026-0042',
+    name: 'SUNRISE DIAGNOSTICS',
+    code: 'TS0042PP',
+    type: 'Test',
+    variant: 'Test rate card',
+    by: 'Asha Rao',
+    at: '2026-11-20T00:00:00+05:30',
+    line_count: 2,
+    amount_text: '₹1,20,000',
+  };
+  const data = pendingFrom('sp365', {
+    pending: { contract: 1, quote: 1, total: 2 },
+    stages: [
+      { key: 'contract', count: 1, items: [contract] },
+      { key: 'quote', count: 1, items: [quote] },
+    ],
+  });
+  expect(data.total).toBe(2);
+  expect(data.stages.contract.items[0]).toMatchObject({
+    id: 'c-7',
+    ref: 'TL/SP/2026/0007',
+    party: 'SUNRISE DIAGNOSTICS',
+    amount: '₹5,00,000',
+    note: '1 of 1 client signatory has signed',
+    due: 'Sent 20 Nov',
+    // approving signs it: the sheet asks for the selfie first
+    needsSelfie: true,
+    // a contract goes back for changes; it is not rejected outright
+    canSendBack: true,
+    canReject: false,
+  });
+  expect(data.stages.quote.items[0]).toMatchObject({
+    id: 'q-42',
+    ref: 'PRQ-2026-0042',
+    amount: '₹1,20,000',
+    note: 'Raised by Asha Rao',
+    tags: ['TEST', '2 TESTS', 'TS0042PP'],
+    canSendBack: false,
+    canReject: true,
+  });
+  expect(data.stages.quote.items[0].needsSelfie).toBeUndefined();
+
+  const full = detailFrom('sp365', {
+    item: {
+      ...contract,
+      stage_name: 'Pending Approval',
+      facts: [{ label: 'Credit limit', value: '₹2,00,000' }],
+      lines: [],
+      documents: [{ id: 'contract', name: 'Contract (PDF)', group: 'Contract' }],
+    },
+  });
+  expect(full.facts).toEqual([['Credit limit', '₹2,00,000']]);
+  expect(full.documents[0]).toMatchObject({ id: 'contract', name: 'Contract (PDF)' });
+});
+
+test('the selfie is a fresh front-camera photo, and a closed or refused camera says so', async () => {
+  const picker = require('react-native-image-picker');
+  const { takeSelfie } = require('../src/services/selfie');
+
+  picker.launchCamera.mockResolvedValueOnce({
+    assets: [{ base64: 'QUJD', type: 'image/jpeg' }],
+  });
+  expect(await takeSelfie()).toEqual({ photo: 'data:image/jpeg;base64,QUJD' });
+  expect(picker.launchCamera.mock.calls[0][0]).toMatchObject({
+    mediaType: 'photo',
+    cameraType: 'front',
+    includeBase64: true,
+    saveToPhotos: false,
+  });
+
+  picker.launchCamera.mockResolvedValueOnce({ didCancel: true });
+  expect(await takeSelfie()).toEqual({ cancelled: true });
+
+  picker.launchCamera.mockResolvedValueOnce({ errorCode: 'permission' });
+  expect((await takeSelfie()).error).toMatch(/Camera access is required/);
+
+  // an app built before the camera was added
+  picker.launchCamera.mockRejectedValueOnce(new Error('native module missing'));
+  expect((await takeSelfie()).error).toMatch(/Update the app/);
 });
 
 test('an AIMS item becomes an approval item: verify, approve or reject', async () => {

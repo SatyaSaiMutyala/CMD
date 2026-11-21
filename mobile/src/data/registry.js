@@ -149,8 +149,42 @@ export const REGISTRY = [
     id: 'sp365',
     mono: 'SP',
     name: 'Sales Pulse 365',
-    sub: 'Sales MIS and pricing',
-    planned: ['Special-pricing requests', 'Customer commitment changes'],
+    sub: 'Sales pipeline and pricing',
+    connected: true,
+    // The two approvals that wait for an admin in Sales Pulse.
+    stages: [
+      {
+        // The pipeline's last tab: the client has signed the contract. It is
+        // approved (which signs it as Party One) or sent back for changes.
+        key: 'contract',
+        label: 'Pending Approval',
+        short: 'Contracts',
+        done: 'Pending approval is clear',
+        next: 'My Accounts',
+        back: 'Generate Contract',
+        approveTitle: 'APPROVE AND SIGN CONTRACT',
+        approveFine:
+          'Applies your signature to every page as Party One, executes the contract, emails both parties and issues the client code. Your selfie is kept with the contract as proof of who signed. Logged against your name.',
+        approveDone: 'The contract is signed and the client code issued.',
+      },
+      {
+        // A pricing request: approved or rejected, never sent back.
+        key: 'quote',
+        label: 'Price Quote Approval',
+        short: 'Quotes',
+        done: 'Price quote approval is clear',
+        next: 'Approved pricing',
+        approveTitle: 'APPROVE PRICE QUOTE',
+        approveFine:
+          'Every test still waiting on this request is approved at the price asked, and the salesperson is told. It is logged against your name.',
+        approveDone: 'The salesperson has been told.',
+        rejectTitle: 'REJECT PRICE QUOTE',
+        rejectTo: 'The salesperson',
+        rejectFine:
+          'Every test still waiting on this request is rejected, and the salesperson sees your reason. It is logged against your name.',
+        rejectDone: 'The salesperson has been told.',
+      },
+    ],
   },
   {
     id: 'pace',

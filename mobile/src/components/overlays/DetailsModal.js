@@ -567,7 +567,9 @@ export default function DetailsModal() {
             busyLabel={release ? 'Releasing…' : 'Approving…'}
             onComplete={() => {
               decide('approve')();
-              confirmSheet();
+              // Signing a contract needs the selfie first: the sheet asks
+              // for it and has its own slide. Everything else is sent now.
+              if (!item.needsSelfie) confirmSheet();
             }}
             style={styles.approve}
           />

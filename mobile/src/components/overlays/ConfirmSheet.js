@@ -25,6 +25,7 @@ import {
   useKeyboardHeight,
 } from '../common';
 import { Icon } from '../icons';
+import SelfieStep from './SelfieStep';
 
 /* How each single-item decision reads on the sheet */
 const KINDS = {
@@ -210,6 +211,10 @@ export default function ConfirmSheet() {
   const reasonY = useRef(0);
   const [reason, setReason] = useState('');
   const [missing, setMissing] = useState(false);
+  // The live selfie, for the one decision that needs it (signing a Sales
+  // Pulse contract), and whether signing was tried without it
+  const [photo, setPhoto] = useState(null);
+  const [noPhoto, setNoPhoto] = useState(false);
   const [tooTall, setTooTall] = useState(false);
   // Changing this sends the slider back to its start
   const [attempt, setAttempt] = useState(0);
@@ -222,6 +227,8 @@ export default function ConfirmSheet() {
     if (!open) return undefined;
     setReason('');
     setMissing(false);
+    setPhoto(null);
+    setNoPhoto(false);
     rise.setValue(0);
     Animated.timing(rise, {
       toValue: 1,
@@ -328,6 +335,18 @@ export default function ConfirmSheet() {
       amountNow,
       plainSlide: item.plainSlide,
     });
+    // Signing a contract: the selfie first, as Sales Pulse's own review window
+    // asks, and an optional note for whoever raised the contract
+    const selfie = sheet.type === 'approve' && !!item.needsSelfie;
+    if (selfie) {
+      kind.slide = 'Slide to approve & sign';
+      kind.busy = 'Applying signature…';
+      kind.reason = {
+        label: 'Note for the initiator · optional',
+        required: false,
+        placeholder: 'Anything they should know',
+      };
+    }
     const text = reason.trim();
     const blocked = !!(kind.reason && kind.reason.required && !text);
     body = (
@@ -368,6 +387,18 @@ export default function ConfirmSheet() {
           <Fact strong label={kind.toLabel} value={kind.to} />
         </View>
 
+        {selfie ? (
+          <SelfieStep
+            value={photo}
+            onChange={value => {
+              setPhoto(value);
+              setNoPhoto(false);
+            }}
+            disabled={sheetBusy}
+            missing={noPhoto}
+          />
+        ) : null}
+
         {kind.reason ? (
           <View
             style={styles.reason}
@@ -386,9 +417,10 @@ export default function ConfirmSheet() {
                 setMissing(false);
               }}
               placeholder={
-                stage.rejectTitle
+                kind.reason.placeholder ||
+                (stage.rejectTitle
                   ? 'What should be corrected?'
-                  : "e.g. GST number doesn't match the supplier"
+                  : "e.g. GST number doesn't match the supplier")
               }
               placeholderTextColor={colors.placeholder}
               selectionColor={colors.teal}
@@ -428,13 +460,18 @@ export default function ConfirmSheet() {
           busy={sheetBusy}
           busyLabel={kind.busy}
           canStart={() => {
+            // signing waits for the selfie
+            if (selfie && !photo) {
+              setNoPhoto(true);
+              return false;
+            }
             if (!blocked) return true;
             setMissing(true);
             return false;
           }}
           onComplete={() => {
             Keyboard.dismiss();
-            confirmSheet(text);
+            confirmSheet(text, selfie ? photo : undefined);
           }}
         />
       </>

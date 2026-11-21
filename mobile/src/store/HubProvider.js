@@ -199,7 +199,8 @@ export function useHub() {
       openDetail: (swId, stage, id) =>
         dispatch(detailOpened({ swId, stage, id })),
       closeDetail: () => dispatch(detailClosed()),
-      confirmSheet: reason => dispatch(confirmSheet(reason)),
+      // `photo`: the live selfie, where the decision needs one
+      confirmSheet: (reason, photo) => dispatch(confirmSheet(reason, photo)),
       clearToast: () => dispatch(toastCleared()),
       // Notifications: the first page again, the next page, and the changes
       // (each of those resolves to true when the server accepted it)

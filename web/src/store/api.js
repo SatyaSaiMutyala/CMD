@@ -122,10 +122,12 @@ export const api = createApi({
     }),
     // verb: 'approve' | 'sendback' | 'reject'. Status 409 = already moved.
     decide: build.mutation({
-      query: ({ swId, item, verb, reason }) => ({
+      // `photo`: the live selfie, for the one decision that needs it (signing
+      // a Sales Pulse contract). It goes with this call and is kept nowhere here.
+      query: ({ swId, item, verb, reason, photo }) => ({
         url: `/api/software/${swId}/items/${encodeURIComponent(item.id)}/${verb}`,
         method: 'POST',
-        body: { stage: item.stage, reason: reason || undefined },
+        body: { stage: item.stage, reason: reason || undefined, photo: photo || undefined },
       }),
       // Refetch whether it worked or not: a refusal means the list is stale
       invalidatesTags: (result, error, { swId }) => [{ type: 'Pending', id: swId }, 'History'],

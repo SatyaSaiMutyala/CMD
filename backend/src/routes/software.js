@@ -4,7 +4,7 @@
 //
 //   GET  /api/software/:software/pending                      the CMD's lists there
 //   GET  /api/software/:software/items/:code                  one item in full
-//   POST /api/software/:software/items/:code/:action          { stage, reason }
+//   POST /api/software/:software/items/:code/:action          { stage, reason, photo? }
 //          action = approve | sendback | reject   (AIMS also: verify)
 //   POST /api/software/:software/stages/:stage/approve-all    { codes? }
 //   POST /api/software/:software/items/:code/files/:docId/link   -> { url }
@@ -59,6 +59,22 @@ const record = async (req, rows) => {
   }
 };
 
+// A live selfie taken in the app, for the one decision that needs it (signing
+// a Sales Pulse contract). It is passed straight on to the source, which keeps
+// it with the contract; the hub stores nothing of it. Anything that is not an
+// image of a sensible size is refused before it leaves here.
+const PHOTO = /^data:image\/(jpe?g|png|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_PHOTO_CHARS = 7 * 1024 * 1024;
+const livePhoto = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || value.length > MAX_PHOTO_CHARS || !PHOTO.test(value)) {
+    const err = new Error('That photo could not be read. Take the selfie again.');
+    err.status = 400;
+    throw err;
+  }
+  return value;
+};
+
 router.get('/:software/pending', forward(async (req) => {
   const data = await req.connector.pending();
   await remember(req.connector.id, data);
@@ -92,6 +108,7 @@ router.post('/:software/items/:code/:action', forward(async (req) => {
     stage: req.body?.stage,
     reason: req.body?.reason ? String(req.body.reason).slice(0, 300) : undefined,
     by: req.user.name,
+    photo: livePhoto(req.body?.photo),
   });
   await remember(req.connector.id, data);
   await record(req, [{

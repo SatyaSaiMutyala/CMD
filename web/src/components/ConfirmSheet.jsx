@@ -6,6 +6,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
+import SelfieStep from './SelfieStep.jsx'
 import { findSoftware } from '../data/registry.js'
 import { useHub } from '../state/hubContext.js'
 import { stageCount, visibleItems } from '../state/selectors.js'
@@ -82,6 +83,9 @@ function Sheet() {
   const { sheet, sheetBusy, sheetError, store, closeSheet, confirmSheet } = useHub()
   const [reason, setReason] = useState('')
   const [missing, setMissing] = useState(false)
+  // The live selfie, for the one decision that needs it (see SelfieStep.jsx)
+  const [photo, setPhoto] = useState(null)
+  let selfie = false
 
   const sw = findSoftware(sheet.swId)
   const stage = sw.stages.find((x) => x.key === sheet.stage)
@@ -113,6 +117,13 @@ function Sheet() {
     confirmLabel = sheetBusy ? 'Sending…' : kind.confirmLabel
     confirmColor = kind.confirmColor
     reasonField = kind.reason
+    // Signing a Sales Pulse contract: the selfie first, as its own review
+    // window asks, and an optional note for whoever raised the contract
+    if (sheet.type === 'approve' && item.needsSelfie) {
+      selfie = true
+      reasonField = { label: 'Note for the initiator (optional)', required: false, placeholder: 'Anything they should know' }
+      if (!sheetBusy) confirmLabel = 'Approve & sign as Party 1'
+    }
   }
 
   const submit = () => {
@@ -121,7 +132,8 @@ function Sheet() {
       setMissing(true)
       return
     }
-    confirmSheet(text)
+    if (selfie && !photo) return
+    confirmSheet(text, selfie ? photo : undefined)
   }
 
   return (
@@ -164,6 +176,7 @@ function Sheet() {
             ))}
           </Box>
         ) : null}
+        {selfie ? <SelfieStep value={photo} onChange={setPhoto} disabled={sheetBusy} /> : null}
         {reasonField ? (
           <TextField
             label={reasonField.label}
@@ -172,7 +185,7 @@ function Sheet() {
               setReason(e.target.value)
               setMissing(false)
             }}
-            placeholder="What should be corrected?"
+            placeholder={reasonField.placeholder || 'What should be corrected?'}
             required={reasonField.required}
             error={missing}
             helperText={missing ? 'Give a reason for the rejection.' : ' '}
@@ -180,7 +193,7 @@ function Sheet() {
             multiline
             minRows={2}
             fullWidth
-            autoFocus
+            autoFocus={!selfie}
             slotProps={{ htmlInput: { maxLength: 300 } }}
           />
         ) : null}
@@ -192,7 +205,15 @@ function Sheet() {
           <Button variant="outlined" size="large" onClick={closeSheet} disabled={sheetBusy} sx={{ flex: 1 }}>
             Cancel
           </Button>
-          <Button variant="contained" size="large" color={confirmColor} onClick={submit} disabled={sheetBusy} sx={{ flex: 2 }}>
+          <Button
+            variant="contained"
+            size="large"
+            color={confirmColor}
+            onClick={submit}
+            // signing waits for the selfie
+            disabled={sheetBusy || (selfie && !photo)}
+            sx={{ flex: 2 }}
+          >
             {confirmLabel}
           </Button>
         </Stack>

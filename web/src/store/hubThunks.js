@@ -243,7 +243,7 @@ export const refreshPushStatus = () => async (dispatch) => dispatch(pushSet(awai
 
 /** Confirm the open sheet: send the decision, then say what happened.
     The lists and the history refetch by themselves (RTK Query tags). */
-export const confirmSheet = (reason) => async (dispatch, getState) => {
+export const confirmSheet = (reason, photo) => async (dispatch, getState) => {
   const { sheet, sheetBusy } = getState().hub
   if (!sheet || sheetBusy) return
   const sw = findSoftware(sheet.swId)
@@ -270,6 +270,7 @@ export const confirmSheet = (reason) => async (dispatch, getState) => {
           item: { id: it.id, stage: it.stage },
           verb: verb.send,
           reason: typeof reason === 'string' ? reason : '',
+          photo: typeof photo === 'string' ? photo : undefined,
         }),
       ).unwrap()
       // The source's own word where it has one (AIMS: "Verified" at its first gate)
