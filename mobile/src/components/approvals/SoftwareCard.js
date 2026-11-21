@@ -5,10 +5,19 @@ import { AppText, Mono } from '../common';
 import { Icon } from '../icons';
 
 /* A connected software on the home page: its mark and name, how many are
-   waiting, and the count at each of its stages in order.
-     stages  [{ key, label, count }]   pending / count are null while loading */
+   waiting, and the count at each of its stages.
+     stages  [{ key, label, name, count }]   pending / count are null while
+             loading; `label` is the short name, `name` the full one
+
+   How the stages are laid out depends on how many there are, so every card
+   looks finished:
+     1     one line across the card: the stage's full name, its count
+     2-3   tiles side by side, joined by arrows (they are steps in order)
+     4+    tiles two to a row                                              */
 export default function SoftwareCard({ sw, pending, stages, onPress }) {
   const show = n => (n === null ? '—' : n);
+  const only = stages.length === 1 ? stages[0] : null;
+  const grid = stages.length > 3;
   return (
     <Pressable
       accessibilityRole="button"
@@ -34,33 +43,53 @@ export default function SoftwareCard({ sw, pending, stages, onPress }) {
           </AppText>
         </View>
       </View>
-      <View style={styles.stages}>
-        {stages.map((st, i) => (
-          <React.Fragment key={st.key}>
-            {i ? (
-              <Icon
-                name="chevronRight"
-                size={14}
-                stroke={3}
-                color={colors.teal}
-              />
-            ) : null}
-            <View style={styles.stage}>
-              <AppText display size={20} weight={800}>
-                {show(st.count)}
-              </AppText>
-              <AppText
-                size={11}
-                weight={700}
-                color={colors.muted}
-                numberOfLines={1}
-              >
-                {st.label}
-              </AppText>
-            </View>
-          </React.Fragment>
-        ))}
-      </View>
+      {only ? (
+        // A lone tile stretched across the card looked half empty: one stage
+        // reads better as a single line
+        <View style={styles.single}>
+          <AppText
+            size={13}
+            weight={700}
+            color={colors.muted}
+            numberOfLines={1}
+            style={styles.singleLabel}
+          >
+            {only.name || only.label}
+          </AppText>
+          <AppText display size={20} weight={800}>
+            {show(only.count)}
+          </AppText>
+          <Icon name="chevronRight" size={14} stroke={3} color={colors.teal} />
+        </View>
+      ) : (
+        <View style={[styles.stages, grid ? styles.stagesGrid : null]}>
+          {stages.map((st, i) => (
+            <React.Fragment key={st.key}>
+              {i && !grid ? (
+                <Icon
+                  name="chevronRight"
+                  size={14}
+                  stroke={3}
+                  color={colors.teal}
+                />
+              ) : null}
+              <View style={[styles.stage, grid ? styles.stageGrid : null]}>
+                <AppText display size={20} weight={800}>
+                  {show(st.count)}
+                </AppText>
+                <AppText
+                  size={11}
+                  weight={700}
+                  color={colors.muted}
+                  numberOfLines={1}
+                >
+                  {st.label}
+                </AppText>
+              </View>
+            </React.Fragment>
+          ))}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -116,6 +145,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stages: { flexDirection: 'row', alignItems: 'center', gap: s(6) },
+  // four or more: two to a row
+  stagesGrid: { flexWrap: 'wrap', gap: s(8) },
+  stageGrid: { flexGrow: 1, flexBasis: '46%' },
+  single: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(8),
+    backgroundColor: colors.mint,
+    borderRadius: ms(16),
+    paddingVertical: ms(10),
+    paddingHorizontal: s(14),
+  },
+  singleLabel: { flex: 1 },
   stage: {
     flex: 1,
     backgroundColor: colors.mint,

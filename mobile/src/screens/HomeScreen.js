@@ -83,7 +83,7 @@ function Tile({ icon, value, of, label, bg, iconBg, onPress }) {
 }
 
 /* Home: who is signed in, how much is waiting (and the way into the swipe
-   review), each connected software, and the ones still to come */
+   review), each connected software, and the ones still to come, if any */
 export default function HomeScreen({ navigation }) {
   const { store } = useHub();
   const { user } = useAuth();
@@ -94,13 +94,11 @@ export default function HomeScreen({ navigation }) {
   // A dash, not a 0, until the first answer has arrived
   const known = CONNECTED.some(sw => isLoaded(store, sw));
   const total = known ? totalPending(store) : null;
-  const segments = CONNECTED.flatMap(sw =>
-    sw.stages.map(st => ({
-      label: CONNECTED.length > 1 ? `${sw.mono} · ${st.short}` : st.short,
-      count: stageCount(store, sw, st) || 0,
-    })),
-  ).map((seg, i) => ({
-    ...seg,
+  // One row per system, not per stage: the card stays one size however many
+  // stages a system has. Each system's own card below splits it by stage.
+  const segments = CONNECTED.map((sw, i) => ({
+    label: sw.name,
+    count: swPending(store, sw) || 0,
     color: SEGMENT_COLORS[i % SEGMENT_COLORS.length],
   }));
   const today = store.history.filter(entry => isToday(entry.ts)).length;
@@ -174,32 +172,39 @@ export default function HomeScreen({ navigation }) {
           stages={sw.stages.map(st => ({
             key: st.key,
             label: st.short,
+            name: st.label,
             count: stageCount(store, sw, st),
           }))}
           onPress={() => open(sw, 'list')}
         />
       ))}
 
-      <View style={styles.comingHead}>
-        <AppText display size={19} weight={800} accessibilityRole="header">
-          Coming to the hub
-        </AppText>
-        <AppText size={12.5} weight={600} color={colors.muted}>
-          {COMING.length} systems
-        </AppText>
-      </View>
-      <ScrollView
-        horizontal
-        bounces={false}
-        overScrollMode="never"
-        showsHorizontalScrollIndicator={false}
-        style={styles.comingScroll}
-        contentContainerStyle={styles.comingRow}
-      >
-        {COMING.map(sw => (
-          <ComingCard key={sw.id} sw={sw} onPress={() => open(sw, 'list')} />
-        ))}
-      </ScrollView>
+      {/* Only while something is still to come: with every system connected
+          there is nothing to announce */}
+      {COMING.length ? (
+        <>
+          <View style={styles.comingHead}>
+            <AppText display size={19} weight={800} accessibilityRole="header">
+              Coming to the hub
+            </AppText>
+            <AppText size={12.5} weight={600} color={colors.muted}>
+              {COMING.length} {COMING.length === 1 ? 'system' : 'systems'}
+            </AppText>
+          </View>
+          <ScrollView
+            horizontal
+            bounces={false}
+            overScrollMode="never"
+            showsHorizontalScrollIndicator={false}
+            style={styles.comingScroll}
+            contentContainerStyle={styles.comingRow}
+          >
+            {COMING.map(sw => (
+              <ComingCard key={sw.id} sw={sw} onPress={() => open(sw, 'list')} />
+            ))}
+          </ScrollView>
+        </>
+      ) : null}
     </Screen>
   );
 }

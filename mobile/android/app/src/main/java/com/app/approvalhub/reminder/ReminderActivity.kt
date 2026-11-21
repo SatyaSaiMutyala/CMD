@@ -34,7 +34,14 @@ import java.util.Locale
  * minutes for as long as something is still pending.
  *
  * Drawn to the app's design ("Android lock-screen reminder"): teal, with the
- * time large in the middle and a white card at the bottom.
+ * time inside a yellow ring and a white card at the bottom.
+ *
+ * The ring is not at a fixed place on the screen. The time and date sit in
+ * the middle of whatever room is left between the name at the top and the
+ * card at the bottom, and the ring is drawn around that exact point and sized
+ * to that room — so on a short phone, a tall one, or with a longer card, the
+ * time is always in the centre of the ring and the ring never runs under the
+ * card.
  */
 class ReminderActivity : Activity() {
 
@@ -94,6 +101,10 @@ class ReminderActivity : Activity() {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
         setPadding(dp(22), dp(70), dp(22), dp(30))
+        // the card's shadow falls into the padding; cutting it there left a
+        // dark band under the card's corners
+        clipToPadding = false
+        clipChildren = false
         // The words keep clear of the bars the background now runs behind
         setOnApplyWindowInsetsListener { view, insets ->
           val top: Int
@@ -125,31 +136,65 @@ class ReminderActivity : Activity() {
       },
       LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(34)))
 
-    column.addView(
-      text(SimpleDateFormat("h:mm", Locale.getDefault()).format(now), 100f, Color.WHITE, DISPLAY).apply {
+    val clock =
+      text(SimpleDateFormat("h:mm", Locale.getDefault()).format(now), CLOCK_DP, Color.WHITE, DISPLAY).apply {
         // The clock is a picture, not reading text: it does not grow with the font setting
-        setTextSize(TypedValue.COMPLEX_UNIT_DIP, 100f)
+        setTextSize(TypedValue.COMPLEX_UNIT_DIP, CLOCK_DP)
         letterSpacing = -0.04f
         includeFontPadding = false
         gravity = Gravity.CENTER
-      },
-      LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        .apply { topMargin = dp(96) })
-    column.addView(
-      text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now), 16f, Color.WHITE, BOLD).apply {
+        maxLines = 1
+      }
+    val date =
+      text(SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(now), 15f, Color.WHITE, BOLD).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15f)
         gravity = Gravity.CENTER
-        setPadding(0, dp(6), 0, 0)
-      })
-
-    // Pushes the card to the bottom
-    column.addView(View(this), LinearLayout.LayoutParams(0, 0, 1f))
+        maxLines = 1
+        setPadding(0, dp(4), 0, 0)
+      }
+    // The time over the date, as one block
+    val face =
+      LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_HORIZONTAL
+        addView(clock, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        addView(date, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+      }
+    // All the room between the name and the card, with that block dead centre
+    val stage =
+      FrameLayout(this).apply {
+        addView(
+          face,
+          FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+      }
+    column.addView(stage, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
     column.addView(
       card(total, body),
       LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
+    val rings = Rings(this)
     val root = FrameLayout(this).apply { setBackgroundColor(ReminderNotifier.BRAND) }
-    root.addView(Rings(this), FrameLayout.LayoutParams(MATCH, MATCH))
+    root.addView(rings, FrameLayout.LayoutParams(MATCH, MATCH))
     root.addView(column, FrameLayout.LayoutParams(MATCH, MATCH))
+
+    // Once the room is known: the ring goes round the centre of it, as large
+    // as fits (never under the card, never off the sides), and the time is
+    // sized to sit inside the ring.
+    var clockDp = CLOCK_DP
+    stage.addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+      val room = bottom - top
+      if (room <= 0 || root.width <= 0) return@addOnLayoutChangeListener
+      val radius =
+        minOf(dp(RING_DP), room / 2 - dp(RING_STROKE_DP / 2 + 14), root.width / 2 - dp(RING_STROKE_DP / 2 + 16))
+          .coerceAtLeast(dp(52))
+      rings.place(root.width / 2f, column.top + top + room / 2f, radius.toFloat())
+      val wanted = radius / resources.displayMetrics.density * CLOCK_PER_RADIUS
+      if (Math.abs(wanted - clockDp) > 0.5f) {
+        clockDp = wanted
+        // after this layout pass, not in the middle of it
+        clock.post { clock.setTextSize(TypedValue.COMPLEX_UNIT_DIP, wanted) }
+      }
+    }
     setContentView(root)
   }
 
@@ -286,29 +331,52 @@ class ReminderActivity : Activity() {
 
   private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-  /** The yellow ring and the two faint ones behind the clock. */
+  /**
+   * The yellow ring round the time, and two faint ones outside it. It fills
+   * the screen so the outer rings can run off the edges; where the centre is
+   * and how big the ring is are given by [place], from where the time sits.
+   */
   private class Rings(context: Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private var cx = 0f
+    private var cy = 0f
+    private var radius = 0f
+
+    fun place(x: Float, y: Float, r: Float) {
+      if (x == cx && y == cy && r == radius) return
+      cx = x
+      cy = y
+      radius = r
+      invalidate()
+    }
 
     override fun onDraw(canvas: Canvas) {
+      if (radius <= 0f) return
       val d = resources.displayMetrics.density
-      val cx = width / 2f
-      val cy = 370 * d
       paint.color = ReminderNotifier.YELLOW
       paint.alpha = 255
-      paint.strokeWidth = 30 * d
-      canvas.drawCircle(cx, cy, 110 * d, paint)
+      paint.strokeWidth = RING_STROKE_DP * d
+      canvas.drawCircle(cx, cy, radius, paint)
       paint.color = Color.WHITE
       paint.strokeWidth = 2 * d
       paint.alpha = 115
-      canvas.drawCircle(cx, cy, 170 * d, paint)
+      canvas.drawCircle(cx, cy, radius + 52 * d, paint)
       paint.alpha = 64
-      canvas.drawCircle(cx, cy, 226 * d, paint)
+      canvas.drawCircle(cx, cy, radius + 104 * d, paint)
     }
   }
 
   private companion object {
     const val MATCH = FrameLayout.LayoutParams.MATCH_PARENT
+    // The ring: the most its radius may be (to the middle of the band), and
+    // how thick the band is
+    const val RING_DP = 138
+    const val RING_STROKE_DP = 22
+    // The time's height for a ring of a given radius: "12:45" then spans about
+    // three quarters of the inside of the ring, with the date under it
+    const val CLOCK_PER_RADIUS = 0.6f
+    // Where the time starts before the room has been measured
+    const val CLOCK_DP = 68f
     const val DISPLAY = "BricolageGrotesque-ExtraBold"
     const val EXTRA_BOLD = "Inter-ExtraBold"
     const val BOLD = "Inter-Bold"

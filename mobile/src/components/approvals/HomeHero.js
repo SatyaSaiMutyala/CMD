@@ -7,8 +7,6 @@ import { AppText, Eyebrow, Ring, SlideToConfirm } from '../common';
 const R = 64;
 const STROKE = 18;
 const AROUND = 2 * Math.PI * R;
-// Each arc stops short of the next so their round ends do not overlap
-const GAP = 12;
 export const SEGMENT_COLORS = [
   colors.yellow,
   colors.white,
@@ -16,22 +14,38 @@ export const SEGMENT_COLORS = [
   colors.mintMid,
 ];
 
-/* The ring: one arc per stage, sized by how many are waiting in it */
+// The legend never grows past this many rows, so the card keeps one height
+// however many systems are connected and however much is waiting
+const MAX_ROWS = 4;
+
+/* What the legend and the ring show: every system when they fit; otherwise
+   the ones with the most waiting, and the rest added up in a last row. */
+function rowsOf(segments) {
+  if (segments.length <= MAX_ROWS) return segments;
+  const byCount = [...segments].sort((a, b) => b.count - a.count);
+  const kept = byCount.slice(0, MAX_ROWS - 1);
+  const rest = byCount.slice(MAX_ROWS - 1);
+  return [
+    ...kept,
+    {
+      label: `${rest.length} other systems`,
+      count: rest.reduce((n, seg) => n + seg.count, 0),
+    },
+  ].map((seg, i) => ({ ...seg, color: SEGMENT_COLORS[i] }));
+}
+
+/* The ring: one arc per system, sized by how many are waiting in it */
 function Donut({ segments, total, size = 116 }) {
   const px = ms(size);
   const shown = segments.filter(seg => seg.count > 0);
+  // The arcs meet edge to edge and together go all the way round: no gaps
+  // and no rounded ends, so the ring always reads as one complete circle
   let run = 0;
-  const arcs = shown.map((seg, i) => {
-    const share = (seg.count / total) * AROUND;
+  const arcs = shown.map(seg => {
+    const length = (seg.count / total) * AROUND;
     const start = run;
-    run += share;
-    const alone = shown.length === 1;
-    const length = alone ? AROUND : Math.max(share - (i ? GAP : GAP / 2), 1);
-    return {
-      color: seg.color,
-      length,
-      offset: alone || !i ? 0 : -(start + GAP / 2),
-    };
+    run += length;
+    return { color: seg.color, length, offset: -start };
   });
   return (
     <Svg
@@ -58,7 +72,7 @@ function Donut({ segments, total, size = 116 }) {
           fill="none"
           stroke={arc.color}
           strokeWidth={STROKE}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={`${arc.length} ${AROUND - arc.length}`}
           strokeDashoffset={arc.offset}
         />
@@ -68,13 +82,15 @@ function Donut({ segments, total, size = 116 }) {
 }
 
 /* The teal card at the top of the home page: how many approvals are waiting,
-   split by stage, and the button into the swipe review.
+   split by system, and the button into the swipe review. The card is the same
+   size whatever the numbers are.
      total     number, or null while the first answer is on its way
-     segments  [{ label, count, color }]
+     segments  [{ label, count, color }], one per connected system
      onStart   the knob at the bottom was slid across
      resetKey  change it to put that knob back at the start                  */
 export default function HomeHero({ total, segments, onStart, resetKey }) {
   const known = total !== null;
+  const rows = rowsOf(segments);
   return (
     <View style={styles.card}>
       <Ring
@@ -99,7 +115,7 @@ export default function HomeHero({ total, segments, onStart, resetKey }) {
 
       <View style={styles.body}>
         <View style={styles.donutBox}>
-          <Donut segments={segments} total={total || 0} />
+          <Donut segments={rows} total={total || 0} />
           <View style={styles.count}>
             <AppText
               display
@@ -119,7 +135,7 @@ export default function HomeHero({ total, segments, onStart, resetKey }) {
           </View>
         </View>
         <View style={styles.legend}>
-          {segments.map(seg => (
+          {rows.map(seg => (
             <View key={seg.label} style={styles.legendRow}>
               <View style={[styles.swatch, { backgroundColor: seg.color }]} />
               <AppText
@@ -131,7 +147,12 @@ export default function HomeHero({ total, segments, onStart, resetKey }) {
               >
                 {seg.label}
               </AppText>
-              <AppText size={15} weight={800} color={colors.white}>
+              <AppText
+                size={15}
+                weight={800}
+                color={colors.white}
+                style={styles.legendCount}
+              >
                 {known ? seg.count : '—'}
               </AppText>
             </View>
@@ -206,8 +227,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: ms(24),
   },
-  legend: { flex: 1, gap: mvs(7) },
+  legend: { flex: 1, gap: mvs(9) },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: s(8) },
   legendLabel: { flex: 1 },
+  // the numbers line up in a column, whatever their width
+  legendCount: { minWidth: ms(26), textAlign: 'right' },
   swatch: { width: ms(12), height: ms(12), borderRadius: ms(4) },
 });
