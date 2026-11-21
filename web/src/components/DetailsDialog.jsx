@@ -12,6 +12,8 @@ import { useState } from 'react'
 import { findSoftware } from '../data/registry.js'
 import { useHub } from '../state/hubContext.js'
 import { useCreateFileLinkMutation, useGetItemQuery } from '../store/api.js'
+import AssetPreview from './AssetPreview.jsx'
+import ZipContents from './ZipContents.jsx'
 
 function Section({ title, children }) {
   return (
@@ -43,20 +45,24 @@ function Details() {
   const [createFileLink] = useCreateFileLinkMutation()
   const [opening, setOpening] = useState(null) // id of the document being opened
   const [fileError, setFileError] = useState(null)
+  const [inside, setInside] = useState(null) // id of the zip being looked into
 
   const sw = findSoftware(detail.swId)
   const stage = sw.stages.find((x) => x.key === detail.stage)
-  // At the release stage the forward action is releasing the payment
-  const approveLabel = stage && stage.key === 'rel' ? 'Release payment' : 'Approve'
+  // The stage's own word for going forward ("Publish"); at the release stage
+  // it is releasing the payment
+  const approveLabel = (stage && stage.approveLabel) || (stage && stage.key === 'rel' ? 'Release payment' : 'Approve')
 
-  const openDocument = async (doc) => {
-    setOpening(doc.id)
+  // `docId` names the document: its own id, "<id>!save" to download it, or a
+  // file inside a zip (see ZipContents)
+  const openDocument = async (docId) => {
+    setOpening(docId)
     setFileError(null)
     // Opened now, while the click still counts, so the browser does not block
     // the new tab; the address is filled in once the link has been made.
     const tab = window.open('', '_blank')
     try {
-      const url = await createFileLink({ swId: detail.swId, id: detail.id, docId: doc.id }).unwrap()
+      const url = await createFileLink({ swId: detail.swId, id: detail.id, docId }).unwrap()
       if (tab) tab.location.replace(url)
       else window.location.assign(url)
     } catch (e) {
@@ -90,8 +96,16 @@ function Details() {
       </Alert>
     )
   } else {
+    // The first zip on the item is open from the start when the file itself
+    // is one: looking inside is that file's preview
+    const lookingIn = inside === null && data.preview && data.preview.kind === 'zip' ? 'master' : inside
     body = (
       <Grid container columns={12} spacing={3}>
+        {data.preview && data.preview.url ? (
+          <Grid size={12}>
+            <AssetPreview preview={data.preview} name={data.party} />
+          </Grid>
+        ) : null}
         <Grid size={{ xs: 12, md: 6 }}>
           <Section title={data.factsTitle || 'Figures'}>
             {data.facts.map(([label, value], i) => (
@@ -108,32 +122,48 @@ function Details() {
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
           <Stack spacing={2.5}>
-            <Section title="Documents">
+            <Section title={data.documentsTitle || 'Documents'}>
               {data.documents.length ? (
                 data.documents.map((doc, i) => (
-                  <Stack
-                    key={doc.id}
-                    direction="row"
-                    sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5, ...rowSx(!i) }}
-                  >
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
-                        {doc.name}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {[doc.group, doc.size, doc.source].filter(Boolean).join(' · ')}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      disabled={!!opening}
-                      onClick={() => openDocument(doc)}
-                      sx={{ flexShrink: 0 }}
-                    >
-                      {opening === doc.id ? 'Opening…' : 'Open'}
-                    </Button>
-                  </Stack>
+                  <Box key={doc.id} sx={rowSx(!i)}>
+                    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
+                          {doc.name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                          {[doc.group, doc.size, doc.source].filter(Boolean).join(' · ')}
+                        </Typography>
+                        {doc.note ? (
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block' }}>
+                            “{doc.note}”
+                          </Typography>
+                        ) : null}
+                      </Box>
+                      <Stack direction="row" spacing={0.75} sx={{ flexShrink: 0 }}>
+                        {/* What can be done with a file depends on what it is (a
+                            source that does not say gets the plain Open) */}
+                        {doc.kind === 'zip' ? (
+                          <Button variant="outlined" size="small" onClick={() => setInside(lookingIn === doc.id ? '' : doc.id)}>
+                            {lookingIn === doc.id ? 'Close' : 'Look inside'}
+                          </Button>
+                        ) : null}
+                        {!doc.kind || ['image', 'pdf', 'video', 'audio'].includes(doc.kind) ? (
+                          <Button variant="outlined" size="small" disabled={!!opening} onClick={() => openDocument(doc.id)}>
+                            {opening === doc.id ? 'Opening…' : 'Open'}
+                          </Button>
+                        ) : null}
+                        {doc.kind ? (
+                          <Button variant="text" size="small" disabled={!!opening} onClick={() => openDocument(`${doc.id}!save`)}>
+                            {opening === `${doc.id}!save` ? '…' : 'Download'}
+                          </Button>
+                        ) : null}
+                      </Stack>
+                    </Stack>
+                    {doc.kind === 'zip' && lookingIn === doc.id ? (
+                      <ZipContents swId={detail.swId} id={detail.id} docId={doc.id} onOpen={openDocument} opening={opening} />
+                    ) : null}
+                  </Box>
                 ))
               ) : (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>

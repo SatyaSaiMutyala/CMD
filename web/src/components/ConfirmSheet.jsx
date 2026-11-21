@@ -64,9 +64,13 @@ const KINDS = {
     fine:
       stage.rejectFine ||
       'The item goes all the way back to the desk that registered it, with your reason shown to them. It is logged against your name.',
-    confirmLabel: 'Confirm rejection',
-    confirmColor: 'error',
-    reason: { label: 'Reason for rejection', required: true },
+    confirmLabel: stage.rejectConfirm || 'Confirm rejection',
+    confirmColor: stage.rejectConfirm ? 'primary' : 'error',
+    reason: {
+      label: stage.rejectReason || 'Reason for rejection',
+      required: true,
+      missing: stage.rejectMissing || 'Give a reason for the rejection.',
+    },
   }),
 }
 
@@ -188,7 +192,7 @@ function Sheet() {
             placeholder={reasonField.placeholder || 'What should be corrected?'}
             required={reasonField.required}
             error={missing}
-            helperText={missing ? 'Give a reason for the rejection.' : ' '}
+            helperText={missing ? reasonField.missing || 'Give a reason for the rejection.' : ' '}
             disabled={sheetBusy}
             multiline
             minRows={2}

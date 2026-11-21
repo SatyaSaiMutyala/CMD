@@ -9,7 +9,8 @@
 //       { "ref": "INS-2026-1140", "party": "TRANSASIA BIO-MEDICALS LTD",
 //         "amount_text": "₹7,662",
 //         "from": null,               // the CMD stage it left, or null
-//         "to": "pay" }               // the CMD stage it entered, or null
+//         "to": "pay",                // the CMD stage it entered, or null
+//         "silent": true }            // optional: refresh, but ring nobody
 //     ]
 //   }
 //
@@ -41,6 +42,9 @@ const readChanges = (body) => {
       amount: text(c && (c.amount_text || c.amount)),
       from: c && c.from ? text(c.from) : null,
       to: c && c.to ? text(c.to) : null,
+      // The source's own word that nobody need be rung for this one (work
+      // in progress landing in a list, not a decision waiting)
+      silent: !!(c && c.silent),
     }));
   }
   const event = String(body.event || 'updated');

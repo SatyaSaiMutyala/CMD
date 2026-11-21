@@ -267,8 +267,16 @@ function ReviewView({ sw, stage, tabs, fetching, onStage, onBack, onList }) {
           backLabel="Back to home"
           title={sw.name}
           sub={`Swipe right to ${
-            stage.key === 'rel' ? 'release' : 'approve'
-          } · left to ${left === 'reject' ? 'reject' : 'send back'}`}
+            stage.key === 'rel'
+              ? 'release'
+              : (stage.approveLabel || 'approve').toLowerCase()
+          } · left ${
+            left === 'reject'
+              ? top && top.rejectLabel
+                ? `for ${top.rejectLabel.toLowerCase()}`
+                : 'to reject'
+              : 'to send back'
+          }`}
           right={
             <CircleButton
               icon="list"
@@ -334,7 +342,7 @@ function ReviewView({ sw, stage, tabs, fetching, onStage, onBack, onList }) {
           >
             {top.canReject ? (
               <DeckAction
-                label="Reject"
+                label={top.rejectLabel || 'Reject'}
                 icon="x"
                 size={60}
                 iconSize={26}

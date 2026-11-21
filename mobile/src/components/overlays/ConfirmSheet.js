@@ -42,10 +42,11 @@ const KINDS = {
         (release
           ? `Releases this payment and moves it to ${stage.next}. Logged against your name.`
           : `Sends this ${what} on to ${stage.next}. Logged against your name.`),
+      // a stage's own words for going forward ("Slide to publish")
       slide: item.plainSlide
-        ? 'Slide to approve'
+        ? stage.approveSlide || 'Slide to approve'
         : `Slide to ${release ? 'release' : 'approve'} ${item.amountNow}`,
-      busy: release ? 'Releasing…' : 'Approving…',
+      busy: stage.approveBusy || (release ? 'Releasing…' : 'Approving…'),
       tone: 'approve',
     };
   },
@@ -72,10 +73,16 @@ const KINDS = {
     fine:
       stage.rejectFine ||
       'Returns the invoice all the way to the desk that registered it. Logged against your name.',
-    slide: 'Slide to reject',
-    busy: 'Rejecting…',
+    // a stage's own words where its second choice is not a rejection
+    // (Trust Prism's Version Tracker: feedback)
+    slide: stage.rejectSlide || 'Slide to reject',
+    busy: stage.rejectBusy || 'Rejecting…',
     tone: 'return',
-    reason: { label: 'Reason for rejecting · required', required: true },
+    reason: {
+      label: stage.rejectReason || 'Reason for rejecting · required',
+      required: true,
+      missing: stage.rejectMissing || 'Enter a reason before rejecting.',
+    },
   }),
   back: stage => ({
     eyebrow: 'SEND BACK',
@@ -443,7 +450,9 @@ export default function ConfirmSheet() {
               style={styles.reasonInput}
             />
             {missing ? (
-              <FieldError text="Enter a reason before rejecting." />
+              <FieldError
+                text={kind.reason.missing || 'Enter a reason before rejecting.'}
+              />
             ) : null}
           </View>
         ) : null}

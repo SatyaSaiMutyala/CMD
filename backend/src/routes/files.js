@@ -7,7 +7,9 @@
 // and is refused once the account behind it is no longer active — so the link
 // can be opened in a plain browser tab without exposing anything else.
 // The file is fetched from the source project with that project's key and
-// passed straight through; nothing is stored here.
+// passed straight through; nothing is stored here. A source that keeps its
+// files in storage of its own (Trust Prism: large assets) says where the
+// document is instead, and the browser is sent straight there.
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
@@ -28,10 +30,16 @@ router.get('/:token', async (req, res) => {
 
   const user = await User.findById(claim.sub);
   const connector = findConnector(claim.sw);
-  if (!user || !user.is_active || !connector || !connector.file) {
+  if (!user || !user.is_active || !connector || !(connector.file || connector.locate)) {
     return res.status(401).type('text/plain').send('This link is not valid.');
   }
   try {
+    // Somewhere the browser can fetch it from directly? Go there.
+    const where = connector.locate ? await connector.locate(claim.code, claim.doc) : null;
+    if (where && where.url) {
+      res.set({ 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer' });
+      return res.redirect(302, where.url);
+    }
     const file = await connector.file(claim.code, claim.doc);
     res.set({
       'Content-Type': file.contentType,

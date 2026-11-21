@@ -34,6 +34,12 @@ const SOURCES = [
     // The two approvals that wait for an admin there, by the key Sales Pulse sends.
     stages: { contract: 'Pending Approval', quote: 'Price Quote Approval' },
   },
+  {
+    id: 'prism',
+    name: 'Trust Prism',
+    // The Super Admin's tabs there, by the key Trust Prism sends.
+    stages: { review: 'Needs review', publish: 'Ready to publish', draft: 'Version Tracker' },
+  },
 ];
 
 const findSource = (id) => SOURCES.find((s) => s.id === String(id || '').toLowerCase()) || null;

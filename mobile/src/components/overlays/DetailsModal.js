@@ -3,6 +3,7 @@ import {
   Animated,
   BackHandler,
   Easing,
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -31,15 +32,18 @@ import {
   SlideToConfirm,
 } from '../common';
 import { Icon } from '../icons';
+import ZipList from './ZipList';
 
 // Shown in the header or in "Payment so far", so not repeated under Figures
 const NOT_FIGURES = ['Reference', 'Due', 'Already paid', 'To approve now'];
 const IMAGE = /\.(png|jpe?g|gif|webp|heic|bmp)$/i;
 
 /* One attached document: a small preview, its name and where it is kept.
-   Tapping opens it in the phone's browser. */
-function DocCard({ doc, tint, busy, disabled, onPress }) {
-  const image = IMAGE.test(doc.name);
+   Tapping opens it in the phone's browser (a zip is looked inside instead);
+   holding saves it, where the source can hand it over as a download.
+   `picture` is the image itself, when the source has one to show. */
+function DocCard({ doc, tint, busy, disabled, picture, onPress, onLongPress }) {
+  const image = doc.kind ? doc.kind === 'image' : IMAGE.test(doc.name);
   const kind = image
     ? 'Image'
     : (/\.([a-z0-9]{2,5})$/i.exec(doc.name) || [])[1];
@@ -50,9 +54,16 @@ function DocCard({ doc, tint, busy, disabled, onPress }) {
       accessibilityLabel={`Open ${doc.group || doc.name}`}
       disabled={disabled}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [styles.doc, pressed ? styles.pressed : null]}
     >
-      {image ? (
+      {picture ? (
+        <Image
+          source={{ uri: picture }}
+          accessibilityIgnoresInvertColors
+          style={[styles.preview, styles.previewPicture]}
+        />
+      ) : image ? (
         <View style={[styles.preview, styles.previewImage]}>
           <Icon name="image" size={34} stroke={1.8} color={colors.teal} />
         </View>
@@ -121,10 +132,12 @@ export default function DetailsModal() {
   const [createFileLink] = useCreateFileLinkMutation();
   const [opening, setOpening] = useState(null); // id of the document being opened
   const [fileError, setFileError] = useState(null);
+  const [inside, setInside] = useState(null); // id of the zip being looked into
 
   useEffect(() => {
     if (!open) return undefined;
     setFileError(null);
+    setInside(null);
     rise.setValue(0);
     Animated.timing(rise, {
       toValue: 1,
@@ -154,19 +167,27 @@ export default function DetailsModal() {
   const due = facts.Due || (item && item.due) || '';
   const overdue = item ? item.overdue : /overdue/i.test(due);
 
+  // The file itself is a zip: looking inside is its preview, so it starts open
+  const lookingIn =
+    inside === null && data && data.preview && data.preview.kind === 'zip'
+      ? 'master'
+      : inside;
+
   const paid = amountOf(facts['Already paid']);
   const now = amountOf(facts['To approve now']);
   const paidShare =
     paid + now > 0 ? Math.round((paid / (paid + now)) * 100) : 0;
 
-  const openDocument = async doc => {
-    setOpening(doc.id);
+  // `docId` names the document: its own id, "<id>!save" to download it, or a
+  // file inside a zip (see ZipList)
+  const openDocument = async docId => {
+    setOpening(docId);
     setFileError(null);
     try {
       const url = await createFileLink({
         swId: detail.swId,
         id: detail.id,
-        docId: doc.id,
+        docId,
       }).unwrap();
       await Linking.openURL(url);
     } catch (e) {
@@ -328,9 +349,27 @@ export default function DetailsModal() {
                       key={doc.id}
                       doc={doc}
                       tint={i % 2 === 1}
-                      busy={opening === doc.id}
+                      busy={opening === doc.id || opening === `${doc.id}!save`}
                       disabled={!!opening}
-                      onPress={() => openDocument(doc)}
+                      // the current file, shown as it is where it is a picture
+                      picture={
+                        !i &&
+                        data.preview &&
+                        (data.preview.kind === 'image'
+                          ? data.preview.url
+                          : data.preview.poster)
+                      }
+                      // a zip is looked inside; everything else opens
+                      onPress={() =>
+                        doc.kind === 'zip'
+                          ? setInside(lookingIn === doc.id ? '' : doc.id)
+                          : openDocument(doc.id)
+                      }
+                      // a source that says what its files are can hand one
+                      // over as a download
+                      onLongPress={
+                        doc.kind ? () => openDocument(`${doc.id}!save`) : undefined
+                      }
                     />
                   ))}
                 </ScrollView>
@@ -353,7 +392,11 @@ export default function DetailsModal() {
                   style={styles.grow}
                 >
                   {[
-                    data.documents.length ? 'Tap a document to open it.' : '',
+                    !data.documents.length
+                      ? ''
+                      : data.documents.some(doc => doc.kind)
+                      ? 'Tap a file to open it (a zip shows what is inside). Hold to download it.'
+                      : 'Tap a document to open it.',
                     data.documentsNote,
                   ]
                     .filter(Boolean)
@@ -366,6 +409,16 @@ export default function DetailsModal() {
                   icon="alert"
                   text={fileError}
                   style={styles.fileError}
+                />
+              ) : null}
+              {lookingIn ? (
+                <ZipList
+                  key={lookingIn}
+                  swId={detail.swId}
+                  id={detail.id}
+                  docId={lookingIn}
+                  opening={opening}
+                  onOpen={openDocument}
                 />
               ) : null}
             </View>
@@ -550,7 +603,7 @@ export default function DetailsModal() {
               size={64}
               stroke={2.6}
               borderWidth={2}
-              label="Reject"
+              label={item.rejectLabel || 'Reject'}
               onPress={decide('reject')}
             />
           ) : null}
@@ -559,12 +612,14 @@ export default function DetailsModal() {
           <SlideToConfirm
             label={
               item.plainSlide
-                ? 'Slide to approve'
+                ? stage.approveSlide || 'Slide to approve'
                 : `Slide to ${release ? 'release' : 'approve'} ${amount}`
             }
             tone="page"
             holdKey={sheet ? 1 : 0}
-            busyLabel={release ? 'Releasing…' : 'Approving…'}
+            busyLabel={
+              stage.approveBusy || (release ? 'Releasing…' : 'Approving…')
+            }
             onComplete={() => {
               decide('approve')();
               // Signing a contract needs the selfie first: the sheet asks
@@ -640,6 +695,7 @@ const styles = StyleSheet.create({
     padding: ms(12),
     gap: ms(6),
   },
+  previewPicture: { resizeMode: 'cover', backgroundColor: colors.mint },
   previewImage: {
     backgroundColor: colors.mint,
     alignItems: 'center',

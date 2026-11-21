@@ -111,7 +111,7 @@ function Face({ item, sw, stage, left, more }) {
         <View style={styles.hint}>
           <Icon name="chevronsLeft" size={14} stroke={2.4} color={colors.muted} />
           <AppText size={12} weight={700} color={colors.muted}>
-            {left === 'reject' ? 'Reject' : 'Send back'}
+            {left === 'reject' ? item.rejectLabel || 'Reject' : 'Send back'}
           </AppText>
         </View>
         {more ? (
@@ -341,7 +341,9 @@ export default function SwipeDeck({
           ]}
         >
           <AppText display size={left === 'reject' ? 30 : 26} weight={800} track={0.04}>
-            {left === 'reject' ? 'REJECT' : 'SEND BACK'}
+            {left === 'reject'
+              ? (item.rejectLabel || 'Reject').toUpperCase()
+              : 'SEND BACK'}
           </AppText>
         </Animated.View>
       </Animated.View>

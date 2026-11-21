@@ -28,9 +28,15 @@ export const visibleItems = (store, sw, st) => {
   return data ? data.items : [];
 };
 
+// What is waiting on the CMD in one software. A stage marked `quiet` in the
+// registry is work in progress, shown but not a decision waiting (Trust
+// Prism's Version Tracker): it is left out, as the server's reminder leaves it.
 export const swPending = (store, sw) =>
   isLoaded(store, sw)
-    ? sw.stages.reduce((n, st) => n + (stageCount(store, sw, st) || 0), 0)
+    ? sw.stages.reduce(
+        (n, st) => n + (st.quiet ? 0 : stageCount(store, sw, st) || 0),
+        0,
+      )
     : null;
 
 export const totalPending = store =>

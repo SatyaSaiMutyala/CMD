@@ -192,7 +192,53 @@ const fromSalesPulse = (card) => {
   }
 }
 
-const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos, aims: fromAims, sp365: fromSalesPulse }
+/* One Trust Prism asset -> one approval item. The same asset moves through
+   three tabs, and what the buttons do depends on the tab it is in:
+     review   Approve, or Send back to the Version Tracker
+     publish  Publish (make it Live), or Send back for changes
+     draft    Send for approval, or leave Feedback (it stays a draft)
+   An asset has no amount: the card's figure is what kind of asset it is. */
+const PRISM_FORWARD = { review: 'Approve', publish: 'Publish', draft: 'Send for approval' }
+const fromPrism = (card) => {
+  const file = card.file || {}
+  const draft = card.stage === 'draft'
+  const added = card.date ? `Sent ${shortDay(card.date)}` : ''
+  return {
+    id: card.id,
+    ref: [file.ext, `v${card.version}`].filter(Boolean).join(' · '),
+    stage: card.stage,
+    note: card.by ? `Uploaded by ${card.by}` : '',
+    party: card.name,
+    amount: card.type || 'Asset',
+    balance: '',
+    decides: card.name,
+    // where it is filed: "Demand Generation / Out-of-Home / Hoarding"
+    auto: card.path || '',
+    tags: [
+      (card.dist || '').toUpperCase(),
+      file.size || '',
+      card.revisions > 1 ? `${card.revisions} FILES` : '',
+      card.comments ? `${card.comments} ${card.comments === 1 ? 'COMMENT' : 'COMMENTS'}` : '',
+      (card.flags || []).length ? 'FLAGGED' : '',
+    ].filter(Boolean),
+    type: card.type || 'Asset',
+    due: added,
+    dueLong: added,
+    overdue: false,
+    approve: PRISM_FORWARD[card.stage] || 'Approve',
+    // feedback is the Version Tracker's second choice; the other two send back
+    canReject: draft,
+    canSendBack: !draft,
+  }
+}
+
+const MAPPERS = {
+  ledgertrace: fromLedgerTrace,
+  edos: fromEdos,
+  aims: fromAims,
+  sp365: fromSalesPulse,
+  prism: fromPrism,
+}
 
 /** One software's pending answer ->
     { total, stages: { [key]: { count, valueText, items } } } */
@@ -333,11 +379,45 @@ const detailFromSalesPulse = (item) => {
   }
 }
 
+/* One Trust Prism asset in full -> what the details view shows: the file
+   itself (shown in place where it can be), where it is filed and how it may
+   be used, every file in its history, and the feedback thread. */
+const detailFromPrism = (item) => ({
+  id: item.id,
+  ref: [item.file && item.file.ext, `v${item.version}`].filter(Boolean).join(' · '),
+  party: item.name,
+  stageName: item.stage_name,
+  factsTitle: 'About this asset',
+  facts: [
+    ...(item.flags || []).map((why) => ['Governance flag', why]),
+    ...(item.facts || []).map((f) => [f.label, f.value]),
+  ],
+  notes: '',
+  // the current file, straight from Trust Prism's storage: kind, url, poster
+  preview: item.preview || null,
+  documentsTitle: 'Files and revisions',
+  documents: (item.documents || []).map((d) => ({
+    id: d.id,
+    name: d.name,
+    group: d.group || '',
+    size: d.size || '',
+    source: d.by || '',
+    // image | pdf | video | audio open in place; a zip is looked inside;
+    // anything else is downloaded
+    kind: d.kind || 'file',
+    note: d.note || '',
+  })),
+  documentsNote: '',
+  activity: (item.activity || []).slice(0, 12).map((a) => ({ at: a.at, who: a.who, msg: a.msg })),
+  canSendBack: item.stage !== 'draft',
+})
+
 const DETAIL_MAPPERS = {
   ledgertrace: detailFromLedgerTrace,
   edos: detailFromEdos,
   aims: detailFromAims,
   sp365: detailFromSalesPulse,
+  prism: detailFromPrism,
 }
 
 /** One item's full answer -> { id, party, facts, factsTitle?, notes, documents, activity }

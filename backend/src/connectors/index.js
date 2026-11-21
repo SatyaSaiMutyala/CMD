@@ -4,8 +4,9 @@ const ledgertrace = require('./ledgertrace');
 const edos = require('./edos');
 const aims = require('./aims');
 const sp365 = require('./sp365');
+const prism = require('./prism');
 
-const CONNECTORS = { [ledgertrace.id]: ledgertrace, [edos.id]: edos, [aims.id]: aims, [sp365.id]: sp365 };
+const CONNECTORS = { [ledgertrace.id]: ledgertrace, [edos.id]: edos, [aims.id]: aims, [sp365.id]: sp365, [prism.id]: prism };
 
 const findConnector = (id) => CONNECTORS[String(id || '').toLowerCase()] || null;
 

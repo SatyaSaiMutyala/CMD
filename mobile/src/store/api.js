@@ -134,6 +134,15 @@ export const api = createApi({
       }),
       transformResponse: data => data.url,
     }),
+    // What is inside a zip document, where the source can look:
+    // { entries, count, truncated }
+    getContents: build.query({
+      query: ({ swId, id, docId }) =>
+        `/api/software/${swId}/items/${encodeURIComponent(
+          id,
+        )}/files/${encodeURIComponent(docId)}/contents`,
+      keepUnusedDataFor: 60,
+    }),
     // verb: 'approve' | 'sendback' | 'reject'. Status 409 = already moved.
     decide: build.mutation({
       // `photo`: the live selfie, for the one decision that needs it (signing
@@ -274,7 +283,11 @@ export const api = createApi({
 });
 
 // Hooks for components that load their own data
-export const { useGetItemQuery, useCreateFileLinkMutation } = api;
+export const {
+  useGetItemQuery,
+  useGetContentsQuery,
+  useCreateFileLinkMutation,
+} = api;
 
 /** Turns an RTK Query error into an Error the screens can show:
     `.message` to display, `.status` to branch on (409 = already moved). */

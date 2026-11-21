@@ -329,7 +329,7 @@ test('signing in opens the hub with the live pending total from the server', asy
   expect(text).toContain('2pending');
   expect(text).toContain('Start swipe review');
   expect(text).toContain('LedgerTrace');
-  expect(text).toContain('4/4Systems connected');
+  expect(text).toContain('5/5Systems connected');
   expect(text).toContain('eDOS');
   expect(text).toContain('Sales Pulse 365');
 
@@ -528,6 +528,90 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
     dueLong: '4 days overdue',
     overdue: true,
   });
+});
+
+test('a Trust Prism asset: three tabs, the file shown in place, a zip looked inside', async () => {
+  const { pendingFrom, detailFrom } = require('../src/data/adapter');
+  const { zipEntryId } = require('../src/components/overlays/ZipList');
+  const card = {
+    id: '6b013f9fb759e728085b66ee',
+    stage: 'review',
+    name: 'Diwali hoarding',
+    path: 'Demand Generation / Out-of-Home / Hoarding',
+    type: 'Hoarding',
+    dist: 'Public',
+    version: 2,
+    revisions: 3,
+    comments: 1,
+    by: 'Asha',
+    date: '2026-11-20',
+    file: { name: 'hero.pdf', ext: 'PDF', size: '1.5 MB', kind: 'pdf' },
+    flags: ['Expires in 12 days (2026-12-02) — plan the replacement.'],
+  };
+  const data = pendingFrom('prism', {
+    pending: { review: 1, publish: 1, draft: 1, total: 2 },
+    stages: [
+      { key: 'review', count: 1, items: [card] },
+      { key: 'publish', count: 1, items: [{ ...card, stage: 'publish', flags: [] }] },
+      { key: 'draft', count: 1, items: [{ ...card, stage: 'draft', flags: [] }] },
+    ],
+  });
+  expect(data.stages.review.items[0]).toMatchObject({
+    ref: 'PDF · v2',
+    party: 'Diwali hoarding',
+    amount: 'Hoarding',
+    note: 'Uploaded by Asha',
+    auto: 'Demand Generation / Out-of-Home / Hoarding',
+    tags: ['PUBLIC', '1.5 MB', '3 FILES', '1 COMMENT', 'FLAGGED'],
+    due: 'Sent 20 Nov',
+    approve: 'Approve',
+    canSendBack: true,
+    canReject: false,
+  });
+  // the same asset, further along: publishing it, or sending it back
+  expect(data.stages.publish.items[0]).toMatchObject({
+    approve: 'Publish',
+    canSendBack: true,
+  });
+  // still being revised: send it for approval, or say what should change
+  expect(data.stages.draft.items[0]).toMatchObject({
+    approve: 'Send for approval',
+    canSendBack: false,
+    canReject: true,
+    rejectLabel: 'Feedback',
+  });
+
+  const full = detailFrom('prism', {
+    item: {
+      ...card,
+      stage_name: 'Needs review',
+      facts: [{ label: 'Distribution', value: 'Public' }],
+      preview: { kind: 'pdf', url: 'https://storage.test/hero.pdf', poster: null },
+      documents: [
+        { id: 'master', name: 'hero.pdf', group: 'Current file · version 2, revision 1', size: '1.5 MB', kind: 'pdf', by: 'Ravi', note: 'new headline' },
+        { id: 'v1r1', name: 'kit.zip', group: 'version 1, revision 1', size: '8 MB', kind: 'zip', by: 'Asha' },
+      ],
+      activity: [{ at: '2026-11-19T12:00:00.000Z', who: 'Meera', msg: 'v1 · Make the logo bigger' }],
+    },
+  });
+  expect(full.facts[0]).toEqual([
+    'Governance flag',
+    'Expires in 12 days (2026-12-02) — plan the replacement.',
+  ]);
+  expect(full.preview).toEqual({ kind: 'pdf', url: 'https://storage.test/hero.pdf', poster: null });
+  expect(full.documents.map(d => [d.id, d.kind, d.note])).toEqual([
+    ['master', 'pdf', 'new headline'],
+    ['v1r1', 'zip', ''],
+  ]);
+  expect(full.activity[0].msg).toBe('v1 · Make the logo bigger');
+
+  // a file inside a zip is asked for by the zip's id and its path
+  expect(zipEntryId('master', 'brand/readme.txt')).toBe(
+    `zip~master~${Buffer.from('brand/readme.txt').toString('base64url')}`,
+  );
+  expect(zipEntryId('v1r1', 'लोगो/प्राथमिक.svg')).toBe(
+    `zip~v1r1~${Buffer.from('लोगो/प्राथमिक.svg').toString('base64url')}`,
+  );
 });
 
 test('a Sales Pulse contract is signed with a live selfie; a price quote is approved or rejected', async () => {

@@ -45,6 +45,12 @@ module.exports = {
     key: process.env.SP365_API_KEY || process.env.HUB_API_KEY || '',
     timeoutMs: Number(process.env.SP365_TIMEOUT_MS) || 15000,
   },
+  // Trust Prism: where its /api/cmdhub/* lives, and the key it expects from us.
+  prism: {
+    url: process.env.PRISM_API_URL || '',
+    key: process.env.PRISM_API_KEY || process.env.HUB_API_KEY || '',
+    timeoutMs: Number(process.env.PRISM_TIMEOUT_MS) || 15000,
+  },
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',

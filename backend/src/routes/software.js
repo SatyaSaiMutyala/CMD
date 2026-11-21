@@ -9,6 +9,8 @@
 //   POST /api/software/:software/stages/:stage/approve-all    { codes? }
 //   POST /api/software/:software/items/:code/files/:docId/link   -> { url }
 //          a link that opens one attached document, good for two minutes
+//   GET  /api/software/:software/items/:code/files/:docId/contents
+//          what is inside a zip, where the source can look (Trust Prism)
 //
 // Every action carries the stage the app believes the item is at; the source
 // refuses it (409) if the item has moved since, so a double tap cannot act twice.
@@ -95,6 +97,18 @@ router.post('/:software/items/:code/files/:docId/link', forward(async (req) => {
   );
   const base = (env.publicUrl || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
   return { url: `${base}/api/files/${token}`, expires_in: FILE_LINK_SECONDS };
+}));
+
+// Looking inside an archive without downloading it. Each entry that can be
+// opened is opened like any other document, through a link (see the source's
+// connector for the document id of a file inside a zip).
+router.get('/:software/items/:code/files/:docId/contents', forward((req) => {
+  if (!req.connector.contents) {
+    const err = new Error('That software does not open archives here.');
+    err.status = 400;
+    throw err;
+  }
+  return req.connector.contents(req.params.code, req.params.docId);
 }));
 
 router.post('/:software/items/:code/:action', forward(async (req) => {

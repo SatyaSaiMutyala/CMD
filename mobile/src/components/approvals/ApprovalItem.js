@@ -161,13 +161,13 @@ function ApprovalItem({ item, onAction, onDetails: showDetails }) {
         {onReject ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Reject ${ref}`}
+            accessibilityLabel={`${item.rejectLabel || 'Reject'} ${ref}`}
             onPress={pick(onReject)}
             style={[styles.action, styles.actionReject]}
           >
             <Icon name="x" size={20} stroke={2.6} color={colors.white} />
             <AppText size={11.5} weight={800} color={colors.white}>
-              Reject
+              {item.rejectLabel || 'Reject'}
             </AppText>
           </Pressable>
         ) : null}
