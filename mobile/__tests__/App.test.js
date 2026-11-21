@@ -530,7 +530,7 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
   });
 });
 
-test('a Trust Prism asset: three tabs, the file shown in place, a zip looked inside', async () => {
+test('a Trust Prism asset: two tabs, the file shown in place, a zip looked inside', async () => {
   const { pendingFrom, detailFrom } = require('../src/data/adapter');
   const { zipEntryId } = require('../src/components/overlays/ZipList');
   const card = {
@@ -549,11 +549,10 @@ test('a Trust Prism asset: three tabs, the file shown in place, a zip looked ins
     flags: ['Expires in 12 days (2026-12-02) — plan the replacement.'],
   };
   const data = pendingFrom('prism', {
-    pending: { review: 1, publish: 1, draft: 1, total: 2 },
+    pending: { draft: 1, review: 1, total: 1 },
     stages: [
-      { key: 'review', count: 1, items: [card] },
-      { key: 'publish', count: 1, items: [{ ...card, stage: 'publish', flags: [] }] },
       { key: 'draft', count: 1, items: [{ ...card, stage: 'draft', flags: [] }] },
+      { key: 'review', count: 1, items: [card] },
     ],
   });
   expect(data.stages.review.items[0]).toMatchObject({
@@ -568,11 +567,6 @@ test('a Trust Prism asset: three tabs, the file shown in place, a zip looked ins
     canSendBack: true,
     canReject: false,
   });
-  // the same asset, further along: publishing it, or sending it back
-  expect(data.stages.publish.items[0]).toMatchObject({
-    approve: 'Publish',
-    canSendBack: true,
-  });
   // still being revised: send it for approval, or say what should change
   expect(data.stages.draft.items[0]).toMatchObject({
     approve: 'Send for approval',
@@ -584,7 +578,7 @@ test('a Trust Prism asset: three tabs, the file shown in place, a zip looked ins
   const full = detailFrom('prism', {
     item: {
       ...card,
-      stage_name: 'Needs review',
+      stage_name: 'Approval',
       facts: [{ label: 'Distribution', value: 'Public' }],
       preview: { kind: 'pdf', url: 'https://storage.test/hero.pdf', poster: null },
       documents: [

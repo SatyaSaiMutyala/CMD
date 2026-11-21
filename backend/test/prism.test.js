@@ -71,11 +71,10 @@ const startFake = () =>
         if (req.url === '/api/cmdhub/pending') {
           return send(200, {
             ok: true,
-            pending: { review: 1, publish: 0, draft: 3, total: 1 },
+            pending: { draft: 3, review: 1, total: 1 },
             stages: [
-              { key: 'review', name: 'Needs review', count: 1, items: [CARD] },
-              { key: 'publish', name: 'Ready to publish', count: 0, items: [] },
               { key: 'draft', name: 'Version Tracker', count: 3, items: [] },
+              { key: 'review', name: 'Approval', count: 1, items: [CARD] },
             ],
           });
         }
@@ -83,7 +82,7 @@ const startFake = () =>
           return send(200, {
             ok: true,
             item: {
-              ...CARD, stage_name: 'Needs review', facts: [{ label: 'Distribution', value: 'Public' }],
+              ...CARD, stage_name: 'Approval', facts: [{ label: 'Distribution', value: 'Public' }],
               preview: { kind: 'zip', url: null, poster: null },
               documents: [{ id: 'master', name: 'kit.zip', group: 'Current file', size: '1.5 MB', kind: 'zip' }],
               activity: [],
@@ -111,8 +110,8 @@ const startFake = () =>
           const verb = { approve: 'Approved', sendback: 'Sent back', reject: 'Commented' }[m[1]];
           return send(200, {
             ok: true, ref: 'Diwali hoarding', party: 'Hoarding', amount_text: '', verb,
-            from: { key: 'review', name: 'Needs review' }, to: { key: '', name: verb },
-            message: `${verb}: Diwali hoarding.`, pending: { review: 0, publish: 1, draft: 3, total: 1 },
+            from: { key: 'review', name: 'Approval' }, to: { key: '', name: verb },
+            message: `${verb}: Diwali hoarding.`, pending: { draft: 3, review: 0, total: 0 },
           });
         }
         return send(404, { ok: false, error: 'That asset no longer exists.' });
@@ -157,7 +156,7 @@ test('the tabs and one asset are forwarded; the reminder counts only what waits 
 
   const list = await call('GET', '/api/software/prism/pending', { headers: authed() });
   assert.equal(list.status, 200);
-  assert.equal(list.json.stages[0].items[0].name, 'Diwali hoarding');
+  assert.equal(list.json.stages[1].items[0].name, 'Diwali hoarding');
   assert.equal(fake.calls.at(-1).key, 'prism-api-key');
 
   // three drafts in the Version Tracker are shown, not counted as waiting
@@ -218,7 +217,7 @@ test('an asset sent for approval rings; an upload landing in the Version Tracker
   const { events } = await connect();
 
   const quiet = await hook({
-    software: 'prism', pending: { review: 0, publish: 0, draft: 4, total: 0 },
+    software: 'prism', pending: { draft: 4, review: 0, total: 0 },
     changes: [{ ref: 'New leaflet', party: 'Leaflet', from: null, to: 'draft', silent: true }],
   });
   assert.equal(quiet.status, 200);
@@ -229,7 +228,7 @@ test('an asset sent for approval rings; an upload landing in the Version Tracker
 
   events.length = 0;
   const arrived = await hook({
-    software: 'prism', pending: { review: 1, publish: 0, draft: 3, total: 1 },
+    software: 'prism', pending: { draft: 3, review: 1, total: 1 },
     changes: [{ ref: 'New leaflet', party: 'Leaflet', amount_text: '', from: null, to: 'review' }],
   });
   assert.equal(arrived.json.notified.arrivals, 1);
@@ -237,5 +236,5 @@ test('an asset sent for approval rings; an upload landing in the Version Tracker
   const arrival = events.find((e) => e.name === 'hub:arrival');
   assert.ok(arrival, 'the app is told a new approval arrived');
   assert.equal(arrival.payload.title, 'New approval');
-  assert.equal(arrival.payload.body, 'Leaflet · Trust Prism · Needs review');
+  assert.equal(arrival.payload.body, 'Leaflet · Trust Prism · Approval');
 });

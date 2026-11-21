@@ -241,12 +241,11 @@ const fromSalesPulse = card => {
 };
 
 /* One Trust Prism asset -> one approval item. The same asset moves through
-   three tabs, and what the buttons do depends on the tab it is in:
-     review   Approve, or Send back to the Version Tracker
-     publish  Publish (make it Live), or Send back for changes
+   two tabs, and what the buttons do depends on the tab it is in:
      draft    Send for approval, or leave Feedback (it stays a draft)
+     review   Approve, or Send back to the Version Tracker
    An asset has no amount: the card's figure is what kind of asset it is. */
-const PRISM_FORWARD = { review: 'Approve', publish: 'Publish', draft: 'Send for approval' };
+const PRISM_FORWARD = { draft: 'Send for approval', review: 'Approve' };
 const fromPrism = card => {
   const file = card.file || {};
   const draft = card.stage === 'draft';
@@ -282,7 +281,7 @@ const fromPrism = card => {
     dueLong: added,
     overdue: false,
     approve: PRISM_FORWARD[card.stage] || 'Approve',
-    // feedback is the Version Tracker's second choice; the other two send back
+    // feedback is the Version Tracker's second choice; Approval sends back
     canReject: draft,
     canSendBack: !draft,
   };

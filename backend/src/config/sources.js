@@ -37,8 +37,8 @@ const SOURCES = [
   {
     id: 'prism',
     name: 'Trust Prism',
-    // The Super Admin's tabs there, by the key Trust Prism sends.
-    stages: { review: 'Needs review', publish: 'Ready to publish', draft: 'Version Tracker' },
+    // The CMD's two tabs there, by the key Trust Prism sends.
+    stages: { draft: 'Version Tracker', review: 'Approval' },
   },
 ];
 

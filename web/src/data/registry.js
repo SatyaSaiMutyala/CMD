@@ -192,38 +192,10 @@ export const REGISTRY = [
     name: 'Trust Prism',
     sub: 'Brand assets · Approvals and governance',
     connected: true,
-    // What the Super Admin works through there: the two queues of "Approvals
-    // & governance", and the Version Tracker that feeds them. The same asset
-    // moves from tab to tab.
+    // The two places an asset waits there before it is approved: the Version
+    // Tracker first, then Approval. Publishing an approved asset is done in
+    // Trust Prism itself.
     stages: [
-      {
-        key: 'review',
-        label: 'Needs review',
-        short: 'Review',
-        done: 'Nothing is waiting for review',
-        next: 'Ready to publish',
-        back: 'Version Tracker',
-        approveLabel: 'Approve',
-        approveTitle: 'APPROVE ASSET',
-        confirm: 'Confirm approval',
-        approveFine:
-          'Approves this asset in Trust Prism. It then waits in Ready to publish. Logged against your name.',
-        approveDone: 'It is ready to publish.',
-      },
-      {
-        key: 'publish',
-        label: 'Ready to publish',
-        short: 'Publish',
-        done: 'Nothing is waiting to be published',
-        next: 'Live',
-        back: 'Version Tracker',
-        approveLabel: 'Publish',
-        approveTitle: 'PUBLISH ASSET',
-        confirm: 'Confirm publish',
-        approveFine:
-          'Makes this asset Live in Trust Prism: it appears in the Library and under Published. Sending it back instead starts its next version.',
-        approveDone: 'It is Live.',
-      },
       {
         // Work still being revised. Read every revision, say what should
         // change, and send it for approval when it is ready.
@@ -233,13 +205,13 @@ export const REGISTRY = [
         label: 'Version Tracker',
         short: 'Drafts',
         done: 'Nothing is in progress',
-        next: 'Needs review',
+        next: 'Approval',
         approveLabel: 'Send for approval',
         approveTitle: 'SEND FOR APPROVAL',
         confirm: 'Send for approval',
         approveFine:
-          'Sends this asset for approval in Trust Prism. It moves to Needs review, where you approve it or send it back.',
-        approveDone: 'It is now in Needs review.',
+          'Sends this asset for approval in Trust Prism. It moves to Approval, where you approve it or send it back.',
+        approveDone: 'It is now in Approval.',
         rejectTitle: 'Leave feedback',
         rejectTo: 'Stays in the Version Tracker',
         rejectFine:
@@ -249,6 +221,20 @@ export const REGISTRY = [
         rejectConfirm: 'Send feedback',
         rejectReason: 'Your feedback',
         rejectMissing: 'Write the feedback first.',
+      },
+      {
+        key: 'review',
+        label: 'Approval',
+        short: 'Approval',
+        done: 'Nothing is waiting for approval',
+        next: 'Approved',
+        back: 'Version Tracker',
+        approveLabel: 'Approve',
+        approveTitle: 'APPROVE ASSET',
+        confirm: 'Confirm approval',
+        approveFine:
+          'Approves this asset in Trust Prism. Publishing it is done there. Logged against your name.',
+        approveDone: 'It is approved in Trust Prism.',
       },
     ],
   },

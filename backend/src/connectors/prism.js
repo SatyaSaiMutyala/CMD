@@ -1,12 +1,12 @@
 // Trust Prism — the brand asset library. The CMD is the Super Admin there, so
-// the hub shows what the Super Admin works through on "Approvals & governance"
-// and in the Version Tracker, read and decided through Trust Prism's own
-// /api/cmdhub/* endpoints. See backend/src/controllers/cmdHubController.js in
-// the Trust-Prism project.
+// the hub shows the two places an asset waits before it is approved, read and
+// decided through Trust Prism's own /api/cmdhub/* endpoints. See
+// backend/src/controllers/cmdHubController.js in the Trust-Prism project.
 //
-//   review   Needs review      approve, or send back to the Version Tracker
-//   publish  Ready to publish  publish (make Live), or send back for changes
 //   draft    Version Tracker   send for approval, or leave feedback
+//   review   Approval          approve, or send back to the Version Tracker
+//
+// Publishing an approved asset is done in Trust Prism itself.
 //
 // FILES. An asset is a file, and often a large one (films, layered artwork), so
 // nothing is passed through this server: Trust Prism hands out short-lived
@@ -130,7 +130,7 @@ module.exports = {
   SourceError,
   configured,
   actions: ['approve', 'sendback', 'reject'],
-  // { pending: { review, publish, draft, total },
+  // { pending: { draft, review, total },
   //   stages: [{ key, name, count, items: [...] }] }
   pending: () => call('GET', '/api/cmdhub/pending'),
   // { item: { ...card, stage_name, facts, preview, documents, activity } }
