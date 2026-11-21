@@ -51,7 +51,7 @@ const GONE = 'YXBwclR4bnxQTy8yNi0yNy8wMDAwMg';
 const CARD = {
   id: PO, stage: 'approve', queue: 'doc', kind: 'PO — purchase order', ref: 'PO/26-27/00001',
   name: 'ACME DIAGNOSTICS', detail: '1 lines · IGST', by: 'Sita', date: '20 Nov 26', urgent: false,
-  amount_text: '₹1,20,000', approve_label: 'Approve',
+  amount_text: '₹1,20,000', can_verify: false,
 };
 const fake = { calls: [], server: null };
 const startFake = () =>
@@ -89,12 +89,13 @@ const startFake = () =>
           if (body.action === 'reject' && !body.reason) {
             return send(400, { ok: false, error: 'Give a reason for the rejection.', code: 'reason_required' });
           }
-          const approve = body.action === 'approve';
+          const verb = { verify: 'Verified', approve: 'Approved', reject: 'Rejected' }[body.action];
           return send(200, {
             ok: true, ref: 'PO/26-27/00001', party: 'ACME DIAGNOSTICS', amount_text: '₹1,20,000',
-            verb: approve ? 'Approved' : 'Rejected',
-            from: { key: 'doc', name: 'Document Approval' }, to: { key: '', name: approve ? 'Approved' : 'Rejected' },
-            message: approve ? 'Approved PO/26-27/00001.' : 'Rejected PO/26-27/00001.',
+            verb,
+            from: { key: 'doc', name: 'Document Approval' },
+            to: { key: '', name: verb === 'Verified' ? 'Pending approval' : verb },
+            message: `${verb} PO/26-27/00001.`,
             pending: { master: 0, indent: 0, doc: 0, adj: 0, total: 0 },
           });
         }
@@ -153,7 +154,11 @@ test('the queues and one item are forwarded with the server\'s key', async () =>
   assert.equal(bySoftware.find((s) => s.software === 'aims').pending, 1);
 });
 
-test('approve and reject go through under the CMD\'s name and land in the history', async () => {
+test('verify, approve and reject go through under the CMD\'s name and land in the history', async () => {
+  const first = await call('POST', `/api/software/aims/items/${PO}/verify`, { headers: authed(), body: { stage: 'verify' } });
+  assert.equal(first.status, 200);
+  assert.equal(fake.calls.at(-1).body.action, 'verify');
+
   const ok = await call('POST', `/api/software/aims/items/${PO}/approve`, { headers: authed(), body: { stage: 'approve' } });
   assert.equal(ok.status, 200);
   assert.deepEqual(fake.calls.at(-1), {
@@ -172,13 +177,14 @@ test('approve and reject go through under the CMD\'s name and land in the histor
   assert.deepEqual(mine.sort(), [
     ['PO/26-27/00001', 'Approved', 'ACME DIAGNOSTICS', '₹1,20,000', ''],
     ['PO/26-27/00001', 'Rejected', 'ACME DIAGNOSTICS', '₹1,20,000', 'Rate is above the quotation.'],
+    ['PO/26-27/00001', 'Verified', 'ACME DIAGNOSTICS', '₹1,20,000', ''],
   ]);
 });
 
 test('AIMS has no send back and no approve all, and a refusal keeps its words', async () => {
   const back = await call('POST', `/api/software/aims/items/${PO}/sendback`, { headers: authed(), body: { stage: 'approve' } });
   assert.equal(back.status, 400);
-  assert.match(back.json.message, /approve, reject/);
+  assert.match(back.json.message, /verify, approve, reject/);
 
   const all = await call('POST', '/api/software/aims/stages/doc/approve-all', { headers: authed(), body: {} });
   assert.equal(all.status, 400);

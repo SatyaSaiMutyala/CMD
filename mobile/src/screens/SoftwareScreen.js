@@ -344,6 +344,18 @@ function ReviewView({ sw, stage, tabs, fetching, onStage, onBack, onList }) {
                 onPress={act('reject')}
               />
             ) : null}
+            {/* AIMS: still at the first sign-off, so it can be verified only */}
+            {top.canVerify ? (
+              <DeckAction
+                label="Verify"
+                icon="shield"
+                size={50}
+                iconSize={21}
+                stroke={2.4}
+                borderWidth={2}
+                onPress={act('verify')}
+              />
+            ) : null}
             {top.canSendBack === false ? null : (
               <DeckAction
                 label="Send back"

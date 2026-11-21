@@ -131,9 +131,10 @@ const aimsKind = kind =>
 
 /* One item waiting in an AIMS approval queue (a purchase order, an indent, a
    new vendor …) -> one approval item. AIMS signs off in two steps, Verify then
-   Approve: `stage` is the one this item waits for, and the button says so.
-   Where AIMS sends no amount (a master record, or a user who may not see
-   cost) the big figure is what kind of record it is. */
+   Approve: `stage` is the one this item waits for. One still at the first
+   step (`canVerify`) can be verified only, or approved outright.
+   Where AIMS sends no amount (a master record) the big figure is what kind
+   of record it is. */
 const fromAims = card => {
   const kind = aimsKind(card.kind);
   const verify = card.stage === 'verify';
@@ -168,7 +169,8 @@ const fromAims = card => {
     dueLong: sent,
     dueLabel: 'SENT',
     overdue: false,
-    approve: card.approve_label || 'Approve',
+    approve: 'Approve',
+    canVerify: !!card.can_verify,
     canReject: true,
     canSendBack: false,
   };

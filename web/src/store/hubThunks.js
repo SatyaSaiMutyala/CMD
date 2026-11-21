@@ -28,6 +28,8 @@ const BANNER_MS = 6000
 // What each sheet type sends to the server, and how it reads afterwards
 const VERBS = {
   approve: { send: 'approve', past: 'Approved' },
+  // AIMS only: the first of its two sign-offs
+  verify: { send: 'verify', past: 'Verified' },
   back: { send: 'sendback', past: 'Sent back' },
   reject: { send: 'reject', past: 'Rejected' },
 }
@@ -275,9 +277,11 @@ export const confirmSheet = (reason) => async (dispatch, getState) => {
       const where =
         sheet.type === 'approve'
           ? st.approveDone || `Moved to ${st.next}.`
-          : sheet.type === 'back'
-            ? `Returned to ${st.back}.`
-            : st.rejectDone || 'Returned to Registered.'
+          : sheet.type === 'verify'
+            ? st.verifyDone || 'It now waits for approval.'
+            : sheet.type === 'back'
+              ? `Returned to ${st.back}.`
+              : st.rejectDone || 'Returned to Registered.'
       // What people know the item by (a test code, an invoice number)
       dispatch(toastSet({ swId: sw.id, text: `${past} ${it.ref || it.id}. ${where}` }))
     }

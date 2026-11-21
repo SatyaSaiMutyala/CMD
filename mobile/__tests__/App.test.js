@@ -526,7 +526,7 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
   });
 });
 
-test('an AIMS item becomes an approval item: verify or approve, or reject', async () => {
+test('an AIMS item becomes an approval item: verify, approve or reject', async () => {
   const { pendingFrom, detailFrom } = require('../src/data/adapter');
   const order = {
     id: 'YXBwclR4bnxQTy8yNi0yNy8wMDAwMQ',
@@ -540,7 +540,7 @@ test('an AIMS item becomes an approval item: verify or approve, or reject', asyn
     date: '20 Nov 26',
     urgent: false,
     amount_text: '₹1,20,000',
-    approve_label: 'Approve',
+    can_verify: false,
   };
   const item = {
     id: 'YXBwck1hc3RlcnxSRzAwMg',
@@ -554,7 +554,7 @@ test('an AIMS item becomes an approval item: verify or approve, or reject', asyn
     date: '',
     urgent: true,
     amount_text: '',
-    approve_label: 'Verify',
+    can_verify: true,
   };
   const data = pendingFrom('aims', {
     pending: { master: 1, indent: 0, doc: 1, adj: 0, total: 2 },
@@ -576,6 +576,8 @@ test('an AIMS item becomes an approval item: verify or approve, or reject', asyn
     tags: ['TO APPROVE'],
     due: 'Sent 20 Nov 26',
     approve: 'Approve',
+    // already verified: it can only be approved
+    canVerify: false,
     canReject: true,
     canSendBack: false,
     plainSlide: true,
@@ -587,7 +589,9 @@ test('an AIMS item becomes an approval item: verify or approve, or reject', asyn
     amount: 'Item Master',
     eyebrow: 'TO VERIFY',
     tags: ['URGENT', 'TO VERIFY'],
-    approve: 'Verify',
+    // still at the first sign-off: verify only, or approve outright
+    approve: 'Approve',
+    canVerify: true,
     due: '',
   });
 

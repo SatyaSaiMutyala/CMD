@@ -203,6 +203,11 @@ function Details() {
                 Send back
               </Button>
             )}
+            {data.canVerify ? (
+              <Button variant="outlined" color="primary" onClick={() => decide('verify')}>
+                Verify
+              </Button>
+            ) : null}
             <Button variant="contained" color="success" onClick={() => decide('approve')}>
               {approveLabel}
             </Button>

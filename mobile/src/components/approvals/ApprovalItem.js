@@ -17,7 +17,7 @@ const ACTION_W = ms(64);
      left   slides open to Send back (and Reject, where the item allows it)
    Every decision still goes through the confirm sheet.
 
-     onAction(type, id)  type = 'approve' | 'back' | 'reject'
+     onAction(type, id)  type = 'approve' | 'back' | 'reject' | 'verify'
      onDetails(id)
 
    Both are given the item's id, so the same two functions serve every row
@@ -32,13 +32,18 @@ function ApprovalItem({ item, onAction, onDetails: showDetails }) {
   const onReject = item.canReject
     ? () => onAction('reject', item.id)
     : undefined;
+  // AIMS: an item still at its first sign-off can be verified only
+  const onVerify = item.canVerify
+    ? () => onAction('verify', item.id)
+    : undefined;
   const onDetails = () => showDetails(item.id);
   const dx = useRef(new Animated.Value(0)).current;
   const open = useRef(false);
   const amount = item.decides || item.balance || item.amount;
   // Room the left swipe uncovers: the buttons, the gap between and around them
-  const both = !!onReject && !!onSendBack;
-  const reveal = (both ? ACTION_W * 2 + ms(10) : ACTION_W) + ms(14) + ms(8);
+  const actions = [onSendBack, onReject, onVerify].filter(Boolean).length || 1;
+  const reveal =
+    ACTION_W * actions + ms(10) * (actions - 1) + ms(14) + ms(8);
   const live = useRef({});
   live.current = { onApprove, reveal };
 
@@ -137,6 +142,19 @@ function ApprovalItem({ item, onAction, onDetails: showDetails }) {
             <Icon name="undo" size={20} stroke={2.4} />
             <AppText size={11.5} weight={800}>
               Send back
+            </AppText>
+          </Pressable>
+        ) : null}
+        {onVerify ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Verify ${ref}`}
+            onPress={pick(onVerify)}
+            style={[styles.action, styles.actionBack]}
+          >
+            <Icon name="shield" size={20} stroke={2.4} />
+            <AppText size={11.5} weight={800}>
+              Verify
             </AppText>
           </Pressable>
         ) : null}

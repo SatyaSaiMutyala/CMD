@@ -165,6 +165,7 @@ function Stages({ sw }) {
             items={shown}
             rejectLabel={stage.rejectLabel}
             onApprove={(item) => open('approve', item.id)}
+            onVerify={(item) => open('verify', item.id)}
             onSendBack={(item) => open('back', item.id)}
             onReject={(item) => open('reject', item.id)}
             onDetails={(item) => openDetail(sw.id, stage.key, item.id)}
@@ -176,6 +177,7 @@ function Stages({ sw }) {
                 <ApprovalCard
                   item={item}
                   onApprove={() => open('approve', item.id)}
+                  onVerify={item.canVerify ? () => open('verify', item.id) : undefined}
                   onSendBack={item.canSendBack === false ? undefined : () => open('back', item.id)}
                   rejectLabel={stage.rejectLabel}
                   onDetails={() => openDetail(sw.id, stage.key, item.id)}

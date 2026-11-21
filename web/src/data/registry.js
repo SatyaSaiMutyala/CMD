@@ -7,15 +7,19 @@
    A stage's `key` is the one the source project uses for it. The optional
    wording fields on a stage (approveFine, rejectTitle, rejectTo, …) replace
    the default sentences where a software's own words fit better. */
-// AIMS signs a record off in two steps, Verify then Approve, and the CMD does
-// whichever one it is waiting for. The same words fit all four queues.
+// AIMS signs a record off in two steps, Verify then Approve, and the CMD can
+// do either: verify only, or approve outright. The same words fit all four queues.
 const AIMS_WORDING = {
-  next: 'The next sign-off in AIMS',
-  approveTitle: 'SIGN OFF',
-  confirm: 'Confirm sign-off',
+  next: 'Approved in AIMS',
+  approveTitle: 'APPROVE',
+  confirm: 'Confirm approval',
   approveFine:
-    'This signs the record off in AIMS: a verification moves it on to approval, an approval makes it final. It is logged against your name.',
-  approveDone: 'It is signed off in AIMS.',
+    'The record is approved in AIMS and becomes final. If it was still waiting to be verified, it is verified and approved together. It is logged against your name.',
+  approveDone: 'It is approved in AIMS.',
+  verifyTo: 'Waiting for approval in AIMS',
+  verifyFine:
+    'The record is verified in AIMS and then waits for approval, which you or another approver can give. It is logged against your name.',
+  verifyDone: 'It now waits for approval.',
   rejectTitle: 'Reject',
   rejectTo: 'The person who raised it',
   rejectFine:

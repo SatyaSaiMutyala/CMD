@@ -37,6 +37,16 @@ const KINDS = {
     confirmColor: 'success',
     reason: null,
   }),
+  // AIMS only: the first of its two sign-offs
+  verify: (stage, sw) => ({
+    eyebrow: 'Verify',
+    toLabel: 'Then',
+    to: stage.verifyTo || 'Waiting for approval',
+    fine: stage.verifyFine || `The item is verified in ${sw.name} and then waits for approval. It is logged against your name.`,
+    confirmLabel: 'Confirm verification',
+    confirmColor: 'primary',
+    reason: null,
+  }),
   back: (stage) => ({
     eyebrow: 'Send back',
     toLabel: 'Returns to',
@@ -59,7 +69,7 @@ const KINDS = {
   }),
 }
 
-/* Confirms an approve, a send-back, a rejection or a "move all". Nothing is sent until
+/* Confirms an approve, a verification, a send-back, a rejection or a "move all". Nothing is sent until
    the confirm button is pressed. Bottom sheet on phones, centred dialog on desktop. */
 export default function ConfirmSheet() {
   const { sheet } = useHub()

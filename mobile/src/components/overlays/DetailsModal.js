@@ -533,6 +533,17 @@ export default function DetailsModal() {
               onPress={decide('back')}
             />
           )}
+          {/* AIMS: still at the first sign-off, so it can be verified only */}
+          {item.canVerify ? (
+            <CircleButton
+              icon="shield"
+              size={64}
+              stroke={2.4}
+              borderWidth={2}
+              label="Verify"
+              onPress={decide('verify')}
+            />
+          ) : null}
           {item.canReject ? (
             <CircleButton
               icon="x"

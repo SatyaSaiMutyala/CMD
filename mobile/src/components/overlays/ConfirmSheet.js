@@ -48,6 +48,19 @@ const KINDS = {
       tone: 'approve',
     };
   },
+  // AIMS only: the first of its two sign-offs
+  verify: stage => ({
+    eyebrow: 'VERIFY',
+    mark: { icon: 'shield', size: 24, stroke: 2.4, style: 'markBack' },
+    toLabel: 'THEN',
+    to: stage.verifyTo || 'Waiting for approval',
+    fine:
+      stage.verifyFine ||
+      'Verifies this item; it then waits for approval. Logged against your name.',
+    slide: 'Slide to verify',
+    busy: 'Verifying…',
+    tone: 'approve',
+  }),
   reject: stage => ({
     eyebrow:
       stage.rejectTitle ||

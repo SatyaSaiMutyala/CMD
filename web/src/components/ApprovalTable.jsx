@@ -17,9 +17,10 @@ import { ToneChip } from './bits.jsx'
    decisions at the end of the line. The wide-screen form of ApprovalCard,
    showing the same things in a fraction of the height.
 
-   Each handler is called with the item. `onSendBack` and `onReject` are asked
-   per item (`item.canSendBack`, `item.canReject`), as on the card. */
-export default function ApprovalTable({ items, onApprove, onSendBack, onReject, onDetails, rejectLabel }) {
+   Each handler is called with the item. `onSendBack`, `onReject` and
+   `onVerify` are asked per item (`item.canSendBack`, `item.canReject`,
+   `item.canVerify`), as on the card. */
+export default function ApprovalTable({ items, onApprove, onVerify, onSendBack, onReject, onDetails, rejectLabel }) {
   return (
     <TableContainer>
       <Table>
@@ -109,6 +110,12 @@ export default function ApprovalTable({ items, onApprove, onSendBack, onReject, 
                     {canSendBack ? (
                       <Button variant="outlined" color="error" size="small" onClick={() => onSendBack(item)}>
                         Send back
+                      </Button>
+                    ) : null}
+                    {/* AIMS: still at the first sign-off, so it can be verified only */}
+                    {item.canVerify ? (
+                      <Button variant="outlined" color="primary" size="small" onClick={() => onVerify(item)}>
+                        Verify
                       </Button>
                     ) : null}
                     <Button

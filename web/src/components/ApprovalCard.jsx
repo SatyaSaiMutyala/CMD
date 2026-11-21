@@ -9,8 +9,9 @@ import { ToneChip } from './bits.jsx'
    `onReject` adds the Reject link (only some stages allow it);
    `onDetails` adds the link to the full details and attached documents.
    A software with no "send back" (eDOS) gives no `onSendBack`: Reject then
-   takes its place beside Approve. `rejectLabel` words that button. */
-export default function ApprovalCard({ item, onApprove, onSendBack, onReject, onDetails, rejectLabel }) {
+   takes its place beside Approve. `rejectLabel` words that button.
+   `onVerify` adds Verify (AIMS, for an item still at its first sign-off). */
+export default function ApprovalCard({ item, onApprove, onVerify, onSendBack, onReject, onDetails, rejectLabel }) {
   // "Due in 2d" for a payment; "Sent 20 Nov" as it is; nothing when there is none
   const due = !item.due ? '' : item.overdue || /^Sent /.test(item.due) ? item.due : `Due ${item.due}`
   return (
@@ -97,6 +98,11 @@ export default function ApprovalCard({ item, onApprove, onSendBack, onReject, on
           {item.approve}
         </Button>
       </Stack>
+      {onVerify ? (
+        <Button variant="outlined" color="primary" onClick={onVerify}>
+          Verify only
+        </Button>
+      ) : null}
       {onReject && onSendBack ? (
         <Button variant="text" color="error" size="small" onClick={onReject} sx={{ alignSelf: 'center' }}>
           {rejectLabel || 'Reject and return to Registered'}

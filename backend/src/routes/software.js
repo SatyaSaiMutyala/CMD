@@ -5,7 +5,7 @@
 //   GET  /api/software/:software/pending                      the CMD's lists there
 //   GET  /api/software/:software/items/:code                  one item in full
 //   POST /api/software/:software/items/:code/:action          { stage, reason }
-//          action = approve | sendback | reject
+//          action = approve | sendback | reject   (AIMS also: verify)
 //   POST /api/software/:software/stages/:stage/approve-all    { codes? }
 //   POST /api/software/:software/items/:code/files/:docId/link   -> { url }
 //          a link that opens one attached document, good for two minutes
@@ -50,7 +50,7 @@ const remember = async (software, data) => {
 
 // The hub's own record of what the CMD decided — History on both apps reads
 // it. Never allowed to fail the action it follows: that already happened.
-const VERBS = { approve: 'Approved', sendback: 'Sent back', reject: 'Rejected' };
+const VERBS = { approve: 'Approved', verify: 'Verified', sendback: 'Sent back', reject: 'Rejected' };
 const record = async (req, rows) => {
   try {
     await Decision.insertMany(rows.map((row) => ({ user: req.user._id, software: req.connector.id, ...row })));

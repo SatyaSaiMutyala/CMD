@@ -4,11 +4,12 @@
 // /api/cmdhub/* endpoints. See backend/core/cmdhub_views.py and
 // backend/core/services/cmdhub.py in the aims2.0 project.
 //
-// AIMS signs a record off in two steps, Verify then Approve. "approve" here
-// runs whichever one the item is waiting for; AIMS says which in each item's
-// `stage` and `approve_label`. The other decision is reject. There is no
-// "send back" and no "approve all" there, so there is none here, and AIMS
-// shares no attached files with the hub.
+// AIMS signs a record off in two steps, Verify then Approve, and an
+// administrator holds both. So an item still at the first step (`can_verify`)
+// has two ways forward: "verify" takes it through that step only, "approve"
+// takes it all the way. The other decision is reject. There is no "send back"
+// and no "approve all" there, so there is none here, and AIMS shares no
+// attached files with the hub.
 //
 // An item's id is the opaque one AIMS gives it. It goes back to AIMS in the
 // query string or the body, never in the path.
@@ -70,7 +71,7 @@ module.exports = {
   id: 'aims',
   SourceError,
   configured,
-  actions: ['approve', 'reject'],
+  actions: ['verify', 'approve', 'reject'],
   // { pending: { master, indent, doc, adj, total },
   //   stages: [{ key, name, count, items: [...] }] }
   pending: () => call('GET', '/api/cmdhub/pending/'),
