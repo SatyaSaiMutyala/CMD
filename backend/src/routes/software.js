@@ -100,8 +100,11 @@ router.post('/:software/items/:code/:action', forward(async (req) => {
     ref: data.ref || data.invoice || code,
     party: data.party || data.vendor || '',
     amount: data.amount_text || '',
-    // Approving at the release stage is releasing the payment
-    verb: action === 'approve' && data.from && data.from.key === 'rel' ? 'Released' : VERBS[action],
+    // The source's own word where it has one (AIMS: "Verified" at its first
+    // gate). Approving at the release stage is releasing the payment.
+    verb: data.verb
+      ? String(data.verb).slice(0, 30)
+      : action === 'approve' && data.from && data.from.key === 'rel' ? 'Released' : VERBS[action],
     from_stage: data.from ? data.from.key || data.from.name : null,
     to_stage: data.to ? data.to.key || data.to.name : null,
     reason: req.body?.reason ? String(req.body.reason).slice(0, 300) : '',

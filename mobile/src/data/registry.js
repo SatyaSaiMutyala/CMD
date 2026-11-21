@@ -7,6 +7,21 @@
    A stage's `key` is the one the source project uses for it. The optional
    wording fields on a stage (approveFine, rejectTitle, rejectTo, …) replace
    the app's default sentences where a software's own words fit better. */
+// AIMS signs a record off in two steps, Verify then Approve, and the CMD does
+// whichever one it is waiting for. The same words fit all four queues.
+const AIMS_WORDING = {
+  next: 'the next sign-off in AIMS',
+  approveTitle: 'SIGN OFF',
+  approveFine:
+    'Signs this record off in AIMS: a verification moves it on to approval, an approval makes it final. Logged against your name.',
+  approveDone: 'It is signed off in AIMS.',
+  rejectTitle: 'REJECT',
+  rejectTo: 'The person who raised it',
+  rejectFine:
+    'Marks the record rejected in AIMS and returns it to the person who raised it, with your reason. Logged against your name.',
+  rejectDone: 'It is back with the person who raised it.',
+};
+
 export const REGISTRY = [
   {
     id: 'ledgertrace',
@@ -84,6 +99,45 @@ export const REGISTRY = [
         rejectFine:
           'Leaves the catalogue as it is. The person who asked for the change sees your reason. Logged against your name.',
         rejectDone: 'The catalogue is unchanged.',
+      },
+    ],
+  },
+  {
+    id: 'aims',
+    mono: 'AI',
+    name: 'AIMS',
+    sub: 'Inventory, procurement and stores',
+    connected: true,
+    // What waits for the CMD in AIMS's four approval queues. AIMS has approve
+    // and reject only: no "send back" and no "move all".
+    stages: [
+      {
+        key: 'master',
+        label: 'Master Approval',
+        short: 'Masters',
+        done: 'Master approval is clear',
+        ...AIMS_WORDING,
+      },
+      {
+        key: 'indent',
+        label: 'Indent Approval',
+        short: 'Indents',
+        done: 'Indent approval is clear',
+        ...AIMS_WORDING,
+      },
+      {
+        key: 'doc',
+        label: 'Document Approval',
+        short: 'Documents',
+        done: 'Document approval is clear',
+        ...AIMS_WORDING,
+      },
+      {
+        key: 'adj',
+        label: 'Adjustment Approval',
+        short: 'Adjustments',
+        done: 'Adjustment approval is clear',
+        ...AIMS_WORDING,
       },
     ],
   },

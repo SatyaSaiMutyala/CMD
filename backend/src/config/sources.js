@@ -17,6 +17,17 @@ const SOURCES = [
     // One stage: a test addition or edit waiting for approval.
     stages: { req: 'Test Approval' },
   },
+  {
+    id: 'aims',
+    name: 'AIMS',
+    // The CMD's four approval queues there, by the key AIMS sends.
+    stages: {
+      master: 'Master Approval',
+      indent: 'Indent Approval',
+      doc: 'Document Approval',
+      adj: 'Adjustment Approval',
+    },
+  },
   { id: 'sp365', name: 'Sales Pulse 365' },
   { id: 'pace', name: 'PACE' },
   { id: 'tams', name: 'TAMS' },

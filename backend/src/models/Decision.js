@@ -11,7 +11,7 @@ const decisionSchema = new mongoose.Schema(
     ref: { type: String, required: true },
     party: { type: String, default: '' },
     amount: { type: String, default: '' },
-    // 'Approved' | 'Released' | 'Sent back' | 'Rejected' | 'Moved'
+    // 'Approved' | 'Verified' | 'Released' | 'Sent back' | 'Rejected' | 'Moved'
     verb: { type: String, required: true },
     from_stage: { type: String, default: null },
     to_stage: { type: String, default: null },

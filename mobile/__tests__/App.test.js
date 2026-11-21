@@ -325,7 +325,7 @@ test('signing in opens the hub with the live pending total from the server', asy
   expect(text).toContain('2pending');
   expect(text).toContain('Start swipe review');
   expect(text).toContain('LedgerTrace');
-  expect(text).toContain('2/6Systems connected');
+  expect(text).toContain('3/7Systems connected');
   expect(text).toContain('eDOS');
   expect(text).toContain('TruFlow');
 
@@ -524,6 +524,91 @@ test('a LedgerTrace card becomes an approval item the screens can show', async (
     dueLong: '4 days overdue',
     overdue: true,
   });
+});
+
+test('an AIMS item becomes an approval item: verify or approve, or reject', async () => {
+  const { pendingFrom, detailFrom } = require('../src/data/adapter');
+  const order = {
+    id: 'YXBwclR4bnxQTy8yNi0yNy8wMDAwMQ',
+    stage: 'approve',
+    queue: 'doc',
+    kind: 'PO — purchase order',
+    ref: 'PO/26-27/00001',
+    name: 'ACME DIAGNOSTICS',
+    detail: '1 lines · IGST',
+    by: 'Sita',
+    date: '20 Nov 26',
+    urgent: false,
+    amount_text: '₹1,20,000',
+    approve_label: 'Approve',
+  };
+  const item = {
+    id: 'YXBwck1hc3RlcnxSRzAwMg',
+    stage: 'verify',
+    queue: 'master',
+    kind: 'Item Master',
+    ref: 'RG002',
+    name: 'FREE T4',
+    detail: 'Reagents',
+    by: '',
+    date: '',
+    urgent: true,
+    amount_text: '',
+    approve_label: 'Verify',
+  };
+  const data = pendingFrom('aims', {
+    pending: { master: 1, indent: 0, doc: 1, adj: 0, total: 2 },
+    stages: [
+      { key: 'master', count: 1, items: [item] },
+      { key: 'doc', count: 1, items: [order] },
+    ],
+  });
+  expect(data.total).toBe(2);
+  expect(data.stages.doc.items[0]).toMatchObject({
+    // AIMS's own id is what it is asked to decide; people know the order number
+    id: 'YXBwclR4bnxQTy8yNi0yNy8wMDAwMQ',
+    ref: 'PO/26-27/00001',
+    stage: 'approve',
+    party: 'ACME DIAGNOSTICS',
+    amount: '₹1,20,000',
+    eyebrow: 'PURCHASE ORDER',
+    note: 'Raised by Sita',
+    tags: ['TO APPROVE'],
+    due: 'Sent 20 Nov 26',
+    approve: 'Approve',
+    canReject: true,
+    canSendBack: false,
+    plainSlide: true,
+  });
+  // No amount on a master record: the card says what it is, and what to do
+  expect(data.stages.master.items[0]).toMatchObject({
+    stage: 'verify',
+    party: 'FREE T4',
+    amount: 'Item Master',
+    eyebrow: 'TO VERIFY',
+    tags: ['URGENT', 'TO VERIFY'],
+    approve: 'Verify',
+    due: '',
+  });
+
+  const full = detailFrom('aims', {
+    item: {
+      ...order,
+      stage_name: 'Document Approval',
+      facts: [{ label: 'Vendor', value: 'ACME DIAGNOSTICS' }],
+      lines: ['RG001 · TOTAL T3 · 10 · ₹1,20,000'],
+      more_lines: 2,
+      notes: '',
+      activity: [],
+    },
+  });
+  expect(full.stageName).toBe('Document Approval');
+  expect(full.facts).toEqual([
+    ['Vendor', 'ACME DIAGNOSTICS'],
+    ['Line 1', 'RG001 · TOTAL T3 · 10 · ₹1,20,000'],
+    ['More lines', '2 more in AIMS'],
+  ]);
+  expect(full.documents).toEqual([]);
 });
 
 test('an eDOS request becomes an approval item: approve or reject, no send back', async () => {

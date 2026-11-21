@@ -93,7 +93,48 @@ const fromEdos = (card) => {
   }
 }
 
-const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos }
+// "PO — purchase order" -> "Purchase order"; the others read as they are
+const aimsKind = (kind) =>
+  String(kind || '')
+    .replace(/^.*— /, '')
+    .replace(/^./, (c) => c.toUpperCase())
+
+/* One item waiting in an AIMS approval queue (a purchase order, an indent, a
+   new vendor …) -> one approval item. AIMS signs off in two steps, Verify then
+   Approve: `stage` is the one this item waits for, and the button says so.
+   Where AIMS sends no amount (a master record, or a user who may not see
+   cost) the card's figure is what kind of record it is. */
+const fromAims = (card) => {
+  const kind = aimsKind(card.kind)
+  const headline = card.amount_text || kind
+  const sent = card.date ? `Sent ${card.date}` : ''
+  return {
+    // AIMS's own id for it: opaque, and safe to put in an address
+    id: card.id,
+    ref: card.ref,
+    stage: card.stage,
+    note: card.by ? `Raised by ${card.by}` : '',
+    party: card.name || kind,
+    amount: headline,
+    balance: '',
+    decides: headline,
+    auto: card.detail || '',
+    tags: [
+      card.amount_text ? kind.toUpperCase() : '',
+      card.urgent ? 'URGENT' : '',
+      card.stage === 'verify' ? 'TO VERIFY' : 'TO APPROVE',
+    ].filter(Boolean),
+    type: kind,
+    due: sent,
+    dueLong: sent,
+    overdue: false,
+    approve: card.approve_label || 'Approve',
+    canReject: true,
+    canSendBack: false,
+  }
+}
+
+const MAPPERS = { ledgertrace: fromLedgerTrace, edos: fromEdos, aims: fromAims }
 
 /** One software's pending answer ->
     { total, stages: { [key]: { count, valueText, items } } } */
@@ -186,13 +227,34 @@ const detailFromEdos = (req) => {
   }
 }
 
-const DETAIL_MAPPERS = { ledgertrace: detailFromLedgerTrace, edos: detailFromEdos }
+/* One AIMS item in full -> what the details view shows: the record's own
+   fields, then its lines (the items on an order or an indent), and who has
+   signed it so far. AIMS keeps its attached files to itself. */
+const detailFromAims = (item) => {
+  const lines = (item.lines || []).map((text, i) => [`Line ${i + 1}`, text])
+  if (item.more_lines) lines.push(['More lines', `${item.more_lines} more in AIMS`])
+  return {
+    id: item.id,
+    ref: item.ref,
+    party: item.name || aimsKind(item.kind),
+    stageName: item.stage_name,
+    factsTitle: 'Details',
+    facts: [...(item.facts || []).map((f) => [f.label, f.value]), ...lines],
+    notes: [item.notes, item.by ? `Raised by ${item.by}.` : ''].filter(Boolean).join('\n'),
+    documents: [],
+    documentsNote: 'Files attached in AIMS are opened there.',
+    activity: (item.activity || []).slice(0, 8).map((a) => ({ at: a.at, who: a.who, msg: a.msg })),
+    canSendBack: false,
+  }
+}
+
+const DETAIL_MAPPERS = { ledgertrace: detailFromLedgerTrace, edos: detailFromEdos, aims: detailFromAims }
 
 /** One item's full answer -> { id, party, facts, factsTitle?, notes, documents, activity }
     Each source names the item differently in its answer. */
 export function detailFrom(swId, data) {
   const map = DETAIL_MAPPERS[swId]
-  const item = data && (data.invoice || data.request)
+  const item = data && (data.invoice || data.request || data.item)
   return map && item ? map(item) : null
 }
 

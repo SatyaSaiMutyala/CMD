@@ -8,6 +8,8 @@ import { Icon } from '../icons';
 // How each kind of decision is marked on the timeline
 const MARKS = {
   Approved: { style: 'yellow', icon: 'check', stroke: 2.8, size: 20 },
+  // AIMS's first sign-off; marked as an approval
+  Verified: { style: 'yellow', icon: 'check', stroke: 2.8, size: 20 },
   Released: { style: 'teal', rupee: true },
   Moved: { style: 'ring', icon: 'layers', stroke: 2.2, size: 19 },
   'Sent back': { style: 'mint', icon: 'undo', stroke: 2.4, size: 19 },

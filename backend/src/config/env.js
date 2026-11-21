@@ -33,6 +33,12 @@ module.exports = {
     key: process.env.EDOS_API_KEY || process.env.HUB_API_KEY || '',
     timeoutMs: Number(process.env.EDOS_TIMEOUT_MS) || 15000,
   },
+  // AIMS: where its /api/cmdhub/* lives, and the key it expects from us.
+  aims: {
+    url: process.env.AIMS_API_URL || '',
+    key: process.env.AIMS_API_KEY || process.env.HUB_API_KEY || '',
+    timeoutMs: Number(process.env.AIMS_TIMEOUT_MS) || 15000,
+  },
   firebaseServiceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || '',
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',

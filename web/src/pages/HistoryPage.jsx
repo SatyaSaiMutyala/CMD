@@ -10,7 +10,7 @@ import { EmptyState, PageHeader, Panel, ToneChip } from '../components/bits.jsx'
 import { stamp } from '../lib/format.js'
 import { useHub } from '../state/hubContext.js'
 
-const TONE = { Approved: 'ok', Released: 'ok', 'Sent back': 'bad', Rejected: 'bad', Moved: 'accent' }
+const TONE = { Approved: 'ok', Verified: 'ok', Released: 'ok', 'Sent back': 'bad', Rejected: 'bad', Moved: 'accent' }
 
 /* Decisions made so far, newest first. */
 export function HistoryPage() {

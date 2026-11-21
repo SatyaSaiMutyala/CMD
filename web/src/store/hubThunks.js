@@ -262,7 +262,7 @@ export const confirmSheet = (reason) => async (dispatch, getState) => {
         return
       }
       const verb = VERBS[sheet.type]
-      await dispatch(
+      const done = await dispatch(
         api.endpoints.decide.initiate({
           swId: sw.id,
           item: { id: it.id, stage: it.stage },
@@ -270,7 +270,8 @@ export const confirmSheet = (reason) => async (dispatch, getState) => {
           reason: typeof reason === 'string' ? reason : '',
         }),
       ).unwrap()
-      const past = sheet.type === 'approve' && st.key === 'rel' ? 'Released' : verb.past
+      // The source's own word where it has one (AIMS: "Verified" at its first gate)
+      const past = (done && done.verb) || (sheet.type === 'approve' && st.key === 'rel' ? 'Released' : verb.past)
       const where =
         sheet.type === 'approve'
           ? st.approveDone || `Moved to ${st.next}.`
