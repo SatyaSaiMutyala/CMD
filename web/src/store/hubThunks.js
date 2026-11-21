@@ -111,6 +111,18 @@ export const reloadAll = () => (dispatch) => Promise.all(CONNECTED.map((sw) => d
 
 export const reloadHistory = () => (dispatch) => dispatch(fetchNow('getHistory', undefined))
 
+/** Every decision of one application ('' = all), newest first, for the
+    History page's export. Throws with a message fit to show when it fails. */
+export const historyForExport = (swId) => async (dispatch) => {
+  try {
+    return await dispatch(
+      api.endpoints.getHistoryExport.initiate(swId || '', { subscribe: false, forceRefetch: true }),
+    ).unwrap()
+  } catch (e) {
+    throw new Error((e && e.message) || 'Could not get the history. Try again.')
+  }
+}
+
 /** The account's settings again (changed on another device) */
 export const reloadSettings = () => (dispatch) => dispatch(fetchNow('getSettings', undefined))
 

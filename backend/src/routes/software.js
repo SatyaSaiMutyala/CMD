@@ -18,7 +18,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const { findConnector } = require('../connectors');
-const { requireAuth } = require('../middleware/requireAuth');
+const { requireAuth, refuseViewOnly } = require('../middleware/requireAuth');
 const Decision = require('../models/Decision');
 const { announceChange } = require('../services/notifier');
 const { setPending } = require('../services/pending');
@@ -111,7 +111,9 @@ router.get('/:software/items/:code/files/:docId/contents', forward((req) => {
   return req.connector.contents(req.params.code, req.params.docId);
 }));
 
-router.post('/:software/items/:code/:action', forward(async (req) => {
+// Deciding is the CMD's alone: a view-only account is refused before
+// anything is sent to the source.
+router.post('/:software/items/:code/:action', refuseViewOnly, forward(async (req) => {
   const { action, code } = req.params;
   if (!req.connector.actions.includes(action)) {
     const err = new Error(`Unknown action. Use one of: ${req.connector.actions.join(', ')}.`);
@@ -145,7 +147,7 @@ router.post('/:software/items/:code/:action', forward(async (req) => {
   return data;
 }));
 
-router.post('/:software/stages/:stage/approve-all', forward(async (req) => {
+router.post('/:software/stages/:stage/approve-all', refuseViewOnly, forward(async (req) => {
   if (!req.connector.approveAll) {
     const err = new Error('That software decides one item at a time.');
     err.status = 400;

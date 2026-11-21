@@ -90,8 +90,8 @@ android {
         applicationId "com.app.approvalhub"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.2"
+        versionCode 4
+        versionName "1.0.4"
     }
     signingConfigs {
         debug {
@@ -154,3 +154,11 @@ tasks.register("syncAppVersion", Exec) {
     commandLine "node", "scripts/sync-version.js"
 }
 preBuild.dependsOn "syncAppVersion"
+// The JavaScript is bundled by a task of its own, which does not wait for
+// preBuild. Left to itself it could read the version file BEFORE the line
+// above rewrote it, and ship a build that believes it is the previous
+// version: the store then always looks newer, and the "update required" box
+// never goes away. So the bundling waits for the version too.
+tasks.matching { it.name.startsWith("createBundle") && it.name.endsWith("JsAndAssets") }.configureEach {
+    dependsOn "syncAppVersion"
+}

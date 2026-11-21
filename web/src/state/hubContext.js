@@ -14,6 +14,7 @@ import {
   confirmSheet,
   enablePush,
   hideBanner,
+  historyForExport,
   moreNotifications,
   previewArrival,
   readAllNotifications,
@@ -65,6 +66,8 @@ export function useHub() {
       removeNotification: (id) => dispatch(removeNotification(id)),
       removeAllNotifications: () => dispatch(removeAllNotifications()),
 
+      // Every decision of one application ('' = all), for the History export
+      historyForExport: (swId) => dispatch(historyForExport(swId)),
       // Do not disturb for the reminder: any of { on, daily, from, to }
       saveDnd: (change) => dispatch(saveDnd(change)),
       // How often the reminder comes, in minutes

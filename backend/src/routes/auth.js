@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const env = require('../config/env');
 const User = require('../models/User');
-const { requireAuth } = require('../middleware/requireAuth');
+const { requireAuth, refuseViewOnly } = require('../middleware/requireAuth');
 
 const router = express.Router();
 
@@ -61,7 +61,9 @@ router.get('/me', requireAuth, (req, res) => res.json({ user: req.user.toPublic(
 // Being signed in is enough: the website asks only for the new password.
 // `current` is optional — when it is sent (the phone app does) it must be right.
 // The answer carries a fresh token for this device; every other device is signed out.
-router.post('/change-password', changeLimiter, requireAuth, async (req, res) => {
+// (Not for a view-only account: whoever was handed that sign-in must not be
+// able to lock everyone else out of it.)
+router.post('/change-password', changeLimiter, requireAuth, refuseViewOnly, async (req, res) => {
   const current = req.body?.current === undefined || req.body?.current === null ? null : String(req.body.current);
   const next = String(req.body?.next || '');
   const user = await User.findById(req.user._id).select('+password_hash');

@@ -431,6 +431,8 @@ export function detailFrom(swId, data) {
 export function historyFrom(data) {
   return ((data && data.items) || []).map((d) => ({
     ts: d.at,
+    // which application it was decided in: its id, and its name
+    swId: d.software,
     sw: SOFTWARE_NAMES[d.software] || d.software,
     id: d.ref,
     party: d.party,

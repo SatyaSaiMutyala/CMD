@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
-import { APP_VERSION } from '../../update/appVersion';
+import { installedVersion } from '../../update/installedVersion';
 import { colors, ms, mvs, s, shadows } from '../../theme';
 import { useForceUpdate } from '../../update/useForceUpdate';
 import { AppText, Button, Eyebrow } from '../common';
@@ -36,7 +36,7 @@ export default function ForceUpdateDialog() {
           </AppText>
           <AppText size={14} lh={1.5} color={colors.muted} align="center">
             Version {storeVersion} of CMD Approval Hub is available. This
-            version ({APP_VERSION}) can no longer be used. Please update to
+            version ({installedVersion()}) can no longer be used. Please update to
             continue.
           </AppText>
           <Button

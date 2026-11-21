@@ -154,6 +154,14 @@ export const api = createApi({
       providesTags: ['History'],
     }),
 
+    // The whole history of one application ('' = all of them), for the export.
+    // Asked for fresh each time and not kept.
+    getHistoryExport: build.query({
+      query: (swId) => `/api/decisions?limit=5000${swId ? `&software=${encodeURIComponent(swId)}` : ''}`,
+      transformResponse: historyFrom,
+      keepUnusedDataFor: 0,
+    }),
+
     /* ---- notifications ---- */
     // What the hub announced (new approvals, reminders), newest first, a page
     // at a time: { items, hasMore, unread }.

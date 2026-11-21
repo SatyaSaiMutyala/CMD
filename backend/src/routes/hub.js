@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const Decision = require('../models/Decision');
 const Notification = require('../models/Notification');
-const { requireAuth } = require('../middleware/requireAuth');
+const { requireAuth, refuseViewOnly } = require('../middleware/requireAuth');
 const { getPendingSummary } = require('../services/pending');
 
 const router = express.Router();
@@ -43,13 +43,15 @@ router.get('/notifications', requireAuth, async (req, res) => {
 });
 
 // POST /api/notifications/read-all  ->  { ok, changed }
-router.post('/notifications/read-all', requireAuth, async (req, res) => {
+// The list is one list, shared: a view-only account reads it and leaves it
+// as it found it.
+router.post('/notifications/read-all', requireAuth, refuseViewOnly, async (req, res) => {
   const done = await Notification.updateMany({ ...LISTED, read_at: null }, { $set: { read_at: new Date() } });
   return res.json({ ok: true, changed: done.modifiedCount });
 });
 
 // POST /api/notifications/:id/read  ->  { ok }
-router.post('/notifications/:id/read', requireAuth, async (req, res) => {
+router.post('/notifications/:id/read', requireAuth, refuseViewOnly, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Notification not found.' });
   await Notification.updateOne({ _id: req.params.id, read_at: null }, { $set: { read_at: new Date() } });
   return res.json({ ok: true });
@@ -57,7 +59,7 @@ router.post('/notifications/:id/read', requireAuth, async (req, res) => {
 
 // DELETE /api/notifications/:id  ->  { ok }
 // Takes one out of the CMD's list. Nothing is erased: it is marked as removed.
-router.delete('/notifications/:id', requireAuth, async (req, res) => {
+router.delete('/notifications/:id', requireAuth, refuseViewOnly, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Notification not found.' });
   await Notification.updateOne({ _id: req.params.id, cleared_at: null }, { $set: { cleared_at: new Date() } });
   return res.json({ ok: true });
@@ -65,16 +67,20 @@ router.delete('/notifications/:id', requireAuth, async (req, res) => {
 
 // DELETE /api/notifications  ->  { ok, changed }
 // Empties the CMD's list (again by marking, not erasing).
-router.delete('/notifications', requireAuth, async (req, res) => {
+router.delete('/notifications', requireAuth, refuseViewOnly, async (req, res) => {
   const done = await Notification.updateMany({ ...LISTED }, { $set: { cleared_at: new Date() } });
   return res.json({ ok: true, changed: done.modifiedCount });
 });
 
-// GET /api/decisions?limit=100  ->  { items }
-// The CMD's own decisions made through the hub, newest first.
+// GET /api/decisions?limit=100&software=ledgertrace  ->  { items }
+// The CMD's own decisions made through the hub, newest first. `software`
+// keeps it to one application (the History page's export, by application).
+// The limit is generous on purpose: an export wants the whole history.
 router.get('/decisions', requireAuth, async (req, res) => {
-  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
-  const rows = await Decision.find({ user: req.user._id }).sort({ created_at: -1 }).limit(limit);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 5000);
+  const filter = { user: req.user._id };
+  if (req.query.software) filter.software = String(req.query.software).toLowerCase();
+  const rows = await Decision.find(filter).sort({ created_at: -1 }).limit(limit);
   return res.json({ items: rows.map((d) => d.toPublic()) });
 });
 

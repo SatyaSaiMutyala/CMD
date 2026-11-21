@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-// The people who may sign in. Today that is one account: the CMD.
+// The people who may sign in: the CMD, and where needed a view-only account
+// (see `view_only`).
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -8,6 +9,13 @@ const userSchema = new mongoose.Schema(
     password_hash: { type: String, required: true, select: false },
     role: { type: String, default: 'Chairman & Managing Director' },
     is_active: { type: Boolean, default: true },
+    // A view-only sign-in: it sees everything the CMD sees and can decide
+    // nothing. For someone who has to look at the app without acting in it —
+    // the account given to an app store's reviewers, whose testers (and
+    // robots) press every button they find. Enforced by the server
+    // (middleware/requireAuth.js: refuseViewOnly), not by the apps.
+    // Set with:  npm run user:view-only -- --email <email> --on
+    view_only: { type: Boolean, default: false },
     // Login tokens issued before this moment are refused: changing the
     // password signs every other device out.
     password_changed_at: { type: Date, default: null },
@@ -29,7 +37,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.methods.toPublic = function toPublic() {
-  return { id: String(this._id), name: this.name, email: this.email, role: this.role };
+  return { id: String(this._id), name: this.name, email: this.email, role: this.role, view_only: !!this.view_only };
 };
 
 module.exports = mongoose.model('User', userSchema);

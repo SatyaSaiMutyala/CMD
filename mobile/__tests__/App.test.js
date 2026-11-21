@@ -1084,6 +1084,29 @@ test('the version live on Google Play is read from either page layout, or not at
   await expect(fetchPlayStoreVersion()).resolves.toBeNull();
 });
 
+test('the installed version is the one Android reports, not the one bundled into the JavaScript', () => {
+  const { NativeModules } = require('react-native');
+  const { installedVersion } = require('../src/update/installedVersion');
+  const { APP_VERSION } = require('../src/update/appVersion');
+  const before = NativeModules.HubReminder;
+
+  // no native answer (iPhone, or an older build): what was bundled
+  NativeModules.HubReminder = undefined;
+  expect(installedVersion()).toBe(APP_VERSION);
+
+  // Android says 1.0.9 while the JavaScript still carries an older number
+  NativeModules.HubReminder = { getConstants: () => ({ versionName: '1.0.9' }) };
+  expect(installedVersion()).toBe('1.0.9');
+  NativeModules.HubReminder = { versionName: '2.1' };
+  expect(installedVersion()).toBe('2.1');
+
+  // nonsense from native is not believed
+  NativeModules.HubReminder = { getConstants: () => ({ versionName: '' }) };
+  expect(installedVersion()).toBe(APP_VERSION);
+
+  NativeModules.HubReminder = before;
+});
+
 test('version numbers compare part by part, as numbers', () => {
   const { isNewer } = require('../src/update/useForceUpdate');
   expect(isNewer('1.10', '1.9')).toBe(true);

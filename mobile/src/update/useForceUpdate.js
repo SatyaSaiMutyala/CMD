@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
-import {
-  ANDROID_PACKAGE_ID,
-  APP_VERSION,
-  PLAY_STORE_URL,
-} from './appVersion';
+import { ANDROID_PACKAGE_ID, PLAY_STORE_URL } from './appVersion';
+import { installedVersion } from './installedVersion';
 import { fetchPlayStoreVersion } from './playStoreVersion';
 
 // '1.10' is newer than '1.9': compare part by part as numbers.
 export function isNewer(candidate, current) {
-  const a = String(candidate).split('.').map(n => parseInt(n, 10) || 0);
-  const b = String(current).split('.').map(n => parseInt(n, 10) || 0);
+  const a = String(candidate)
+    .split('.')
+    .map(n => parseInt(n, 10) || 0);
+  const b = String(current)
+    .split('.')
+    .map(n => parseInt(n, 10) || 0);
   const len = Math.max(a.length, b.length);
   for (let i = 0; i < len; i += 1) {
     const x = a[i] || 0;
@@ -47,7 +48,10 @@ export function useForceUpdate() {
       const latest = await fetchPlayStoreVersion();
       // Once the store is known to be ahead it stays so: a later look that
       // fails (no network) must not let an old build back in
-      if (latest && isNewer(latest, APP_VERSION)) setStoreVersion(latest);
+      // against the version Android says is installed, not one written into
+      // the JavaScript when it was bundled
+      if (latest && isNewer(latest, installedVersion()))
+        setStoreVersion(latest);
     } catch (e) {
       // Offline, the page changed, the app is not published yet: let them in
     } finally {

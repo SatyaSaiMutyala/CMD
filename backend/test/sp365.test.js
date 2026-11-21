@@ -173,8 +173,11 @@ test('a pricing request is approved or rejected, a contract sent back, and all l
   });
   assert.equal(back.status, 200);
 
-  const { items } = (await call('GET', '/api/decisions', { headers: authed() })).json;
-  const mine = items.filter((d) => d.software === 'sp365').map((d) => [d.ref, d.verb, d.amount, d.reason]);
+  // asked for by application, as the History page's export asks
+  const { items } = (await call('GET', '/api/decisions?software=sp365&limit=5000', { headers: authed() })).json;
+  assert.equal(items.every((d) => d.software === 'sp365'), true);
+  assert.equal((await call('GET', '/api/decisions?software=edos', { headers: authed() })).json.items.length, 0);
+  const mine = items.map((d) => [d.ref, d.verb, d.amount, d.reason]);
   assert.deepEqual(mine.sort(), [
     ['PRQ-2026-0042', 'Approved', '₹1,20,000', ''],
     ['PRQ-2026-0042', 'Rejected', '₹1,20,000', 'Below floor price.'],

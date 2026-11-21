@@ -17,12 +17,27 @@ import com.facebook.react.bridge.ReactMethod
  * needs from Android: where the two permissions stand, the Settings page for
  * each, and a way to try the reminder.
  *
+ * It also says which version of the app is installed (`versionName`), read
+ * from Android itself. The update check compares that with Google Play, so it
+ * can never be a version the JavaScript only believes it is.
+ *
  * JavaScript reaches it as NativeModules.HubReminder.
  */
 class HubReminderModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
 
   override fun getName(): String = NAME
+
+  /** { versionName }: the version of the app that is actually installed. */
+  override fun getConstants(): Map<String, Any> {
+    val version =
+      try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+      } catch (e: Exception) {
+        null
+      }
+    return mapOf("versionName" to (version ?: ""))
+  }
 
   /** { fullScreen, overApps }: true where the CMD has already said yes. */
   @ReactMethod

@@ -29,4 +29,13 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { requireAuth, userFromToken };
+// After requireAuth, on every route that decides or changes something that
+// is not the person's own: a view-only account (User.view_only) is refused
+// here, whatever the app showed it. 403 with a sentence the apps display.
+const VIEW_ONLY = 'This is a view-only account. It can look at approvals but cannot decide or change anything.';
+const refuseViewOnly = (req, res, next) => {
+  if (req.user && req.user.view_only) return res.status(403).json({ message: VIEW_ONLY, code: 'view_only' });
+  return next();
+};
+
+module.exports = { requireAuth, refuseViewOnly, userFromToken };
