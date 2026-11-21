@@ -10,23 +10,21 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { keyframes } from '@mui/material/styles'
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { useAuth } from '../auth/context.js'
+import { fonts } from '../theme/tokens.js'
 
-const BRAND = '#22A991'
-const BRAND_DARK = '#157A69'
+const TEAL = '#0D9488'
+const UI_FONT = '"Segoe UI", system-ui, -apple-system, sans-serif'
 
-const float = keyframes({
-  '0%, 100%': { transform: 'translate(0, 0)' },
-  '50%': { transform: 'translate(-20px, 24px)' },
-})
-const pulse = keyframes({ '0%, 100%': { opacity: 0.35 }, '50%': { opacity: 1 } })
+/* The sign-in page, the same one TruSentinel (GateBook) uses, so every Trustlab
+   app opens the same way. Only the brand half says which app this is. */
 
-/** Login field: 2px light-grey border, 12px corners, icon on the left that turns teal on focus. */
+/** Login field (AIMS): 2px light-grey border, 12px corners, icon on the left that turns teal on focus. */
 const fieldSx = {
   '& .MuiInputLabel-root': {
+    fontFamily: UI_FONT,
     fontSize: 12,
     fontWeight: 600,
     letterSpacing: '0.5px',
@@ -35,15 +33,16 @@ const fieldSx = {
   },
   '& .MuiOutlinedInput-root': {
     minHeight: 46,
+    fontFamily: UI_FONT,
     fontSize: 14,
     borderRadius: '12px',
     bgcolor: 'rgba(255,255,255,.8)',
     '& .MuiOutlinedInput-notchedOutline': { borderWidth: 2, borderColor: '#E5E7EB' },
     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#D1D5DB' },
-    '&.Mui-focused': { boxShadow: '0 0 0 4px rgba(34,169,145,.12)' },
-    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: BRAND, borderWidth: 2 },
+    '&.Mui-focused': { boxShadow: '0 0 0 4px rgba(13,148,136,.1)' },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: TEAL, borderWidth: 2 },
     '& .MuiInputAdornment-positionStart .MuiSvgIcon-root': { color: '#9CA3AF', transition: 'color .15s ease' },
-    '&.Mui-focused .MuiInputAdornment-positionStart .MuiSvgIcon-root': { color: BRAND },
+    '&.Mui-focused .MuiInputAdornment-positionStart .MuiSvgIcon-root': { color: TEAL },
   },
 }
 
@@ -98,14 +97,19 @@ export function LoginPage() {
         display: 'grid',
         placeItems: 'center',
         p: 2,
-        background: `linear-gradient(135deg, ${BRAND_DARK} 0%, ${BRAND} 28%, #4CC9B0 52%, #B5F0E0 76%, #F0FDF9 100%)`,
+        fontFamily: UI_FONT,
+        background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 25%, #14b8a6 50%, #a7f3d0 75%, #f0fdf4 100%)',
+        '@keyframes gbFloat': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '50%': { transform: 'translate(-20px, 24px)' },
+        },
         // faint 60px grid
         '&::before': {
           content: '""',
           position: 'absolute',
           inset: 0,
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px)',
           backgroundSize: '60px 60px',
           pointerEvents: 'none',
         },
@@ -117,8 +121,8 @@ export function LoginPage() {
           height: 600,
           top: -200,
           right: -160,
-          background: 'radial-gradient(circle, rgba(240,199,94,.18) 0%, transparent 70%)',
-          animation: `${float} 8s ease-in-out infinite`,
+          background: 'radial-gradient(circle, rgba(240,199,94,.15) 0%, transparent 70%)',
+          animation: 'gbFloat 8s ease-in-out infinite',
         }}
       />
       <Orb
@@ -127,8 +131,8 @@ export function LoginPage() {
           height: 500,
           bottom: -180,
           left: -140,
-          background: 'radial-gradient(circle, rgba(21,122,105,.28) 0%, transparent 70%)',
-          animation: `${float} 10s ease-in-out infinite reverse`,
+          background: 'radial-gradient(circle, rgba(13,148,136,.25) 0%, transparent 70%)',
+          animation: 'gbFloat 10s ease-in-out infinite reverse',
         }}
       />
 
@@ -155,17 +159,18 @@ export function LoginPage() {
             color: '#fff',
             px: { xs: 3, md: 5 },
             py: { xs: 4, md: 6 },
-            background: `linear-gradient(160deg, ${BRAND_DARK}, ${BRAND} 45%, #0F5F52)`,
+            background: 'linear-gradient(160deg, #0f766e, #0d9488 40%, #115e59)',
           }}
         >
+          {/* Trustlab mark, same as the TruSpace / PACE login (public/trustlab-logo.png). */}
           <Box
             component="img"
             src="/trustlab-logo.png"
             alt=""
             aria-hidden="true"
             sx={{
-              maxWidth: { xs: 150, md: 280 },
-              width: '70%',
+              maxWidth: 320,
+              width: '85%',
               height: 'auto',
               mb: '18px',
               filter: 'drop-shadow(0 4px 15px rgba(0,0,0,.2))',
@@ -174,31 +179,28 @@ export function LoginPage() {
           <Typography
             component="h1"
             sx={{
+              fontFamily: fonts.body,
               fontWeight: 800,
-              fontSize: { xs: 28, md: 36 },
-              letterSpacing: '0.02em',
-              lineHeight: 1.05,
-              textShadow: '0 2px 4px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.12)',
+              fontSize: { xs: 30, md: 38 },
+              letterSpacing: '0.03em',
+              lineHeight: 1,
+              textShadow: '0 2px 4px rgba(0,0,0,.15), 0 4px 12px rgba(0,0,0,.12), 0 0 30px rgba(255,255,255,.12)',
             }}
           >
-            CMD Approval Hub
+            Approval Hub
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ my: 2 }} aria-hidden>
-            {[0, 1, 2, 3].map((i) => (
-              <Box
-                key={i}
-                sx={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: '50%',
-                  bgcolor: i === 0 ? '#F0C75E' : 'rgba(255,255,255,.7)',
-                  animation: `${pulse} 1.6s ease-in-out ${i * 0.2}s infinite`,
-                }}
-              />
-            ))}
-          </Stack>
-          <Typography sx={{ fontSize: 12.5, opacity: 0.82, maxWidth: 280, lineHeight: 1.6 }}>
-            One inbox for every CMD-level approval across Trustlab software.
+          {/* Whose desk this is, where the other apps name their department. */}
+          <Typography
+            sx={{
+              fontFamily: UI_FONT,
+              fontSize: 11,
+              letterSpacing: '3px',
+              textTransform: 'uppercase',
+              color: '#F0C75E',
+              mt: 1.25,
+            }}
+          >
+            Chairman &amp; Managing Director
           </Typography>
         </Stack>
 
@@ -210,7 +212,7 @@ export function LoginPage() {
           sx={{
             position: 'relative',
             flex: 1,
-            bgcolor: 'rgba(255,255,255,.9)',
+            bgcolor: 'rgba(255,255,255,.88)',
             backdropFilter: 'blur(20px)',
             px: { xs: 3, md: 5.25 },
             py: { xs: 4, md: 6 },
@@ -221,7 +223,7 @@ export function LoginPage() {
               left: 0,
               right: 0,
               height: 4,
-              background: `linear-gradient(90deg, ${BRAND_DARK}, ${BRAND}, #f0c75e, #fbbf24)`,
+              background: 'linear-gradient(90deg, #0d9488, #14b8a6, #f0c75e, #fbbf24)',
             },
           }}
         >
@@ -235,9 +237,9 @@ export function LoginPage() {
               py: 0.5,
               mb: 2,
               borderRadius: '20px',
-              bgcolor: '#E6F6F2',
-              border: '1px solid #A9E3D6',
-              color: BRAND_DARK,
+              background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
+              border: '1px solid #a7f3d0',
+              color: TEAL,
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: '1px',
@@ -246,13 +248,16 @@ export function LoginPage() {
             <ShieldOutlinedIcon sx={{ fontSize: 14 }} />
             <span>SECURE</span>
           </Stack>
-          <Typography component="h2" sx={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 }}>
+          <Typography
+            component="h2"
+            sx={{ fontFamily: UI_FONT, fontSize: 28, fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 }}
+          >
             Sign{' '}
-            <Box component="span" sx={{ color: BRAND }}>
+            <Box component="span" sx={{ color: TEAL }}>
               In
             </Box>
           </Typography>
-          <Typography sx={{ fontSize: 13, color: '#6b7280', mt: 0.5, mb: 3.5 }}>
+          <Typography sx={{ fontFamily: UI_FONT, fontSize: 13, color: '#6b7280', mt: 0.5, mb: 3.5 }}>
             Use the email and password your admin gave you.
           </Typography>
 
@@ -296,7 +301,7 @@ export function LoginPage() {
                         edge="end"
                         onClick={() => setShowPw((v) => !v)}
                         aria-label={showPw ? 'Hide password' : 'Show password'}
-                        sx={{ color: '#9CA3AF', '&:hover': { color: BRAND, bgcolor: 'transparent' } }}
+                        sx={{ color: '#9CA3AF', '&:hover': { color: TEAL, bgcolor: 'transparent' } }}
                       >
                         {showPw ? <VisibilityOffOutlinedIcon fontSize="small" /> : <VisibilityOutlinedIcon fontSize="small" />}
                       </IconButton>
@@ -315,6 +320,7 @@ export function LoginPage() {
                   bgcolor: '#fef2f2',
                   border: '1px solid #fecaca',
                   color: '#b91c1c',
+                  fontFamily: UI_FONT,
                   fontSize: 13,
                 }}
               >
@@ -330,16 +336,17 @@ export function LoginPage() {
                   minHeight: 48,
                   borderRadius: '12px',
                   color: '#fff',
+                  fontFamily: UI_FONT,
                   fontSize: 15,
                   fontWeight: 700,
-                  background: `linear-gradient(135deg, ${BRAND_DARK}, ${BRAND} 50%, #f0c75e)`,
+                  background: 'linear-gradient(135deg, #0d9488, #14b8a6 50%, #f0c75e)',
                   backgroundSize: '200% 100%',
                   backgroundPosition: '0% 0%',
                   transition: 'background-position .35s ease, transform .15s ease, box-shadow .15s ease',
                   '&:hover': {
                     backgroundPosition: '100% 0%',
                     transform: 'translateY(-1px)',
-                    boxShadow: '0 8px 25px rgba(34,169,145,.3)',
+                    boxShadow: '0 8px 25px rgba(13,148,136,.3)',
                   },
                   '&.Mui-disabled': { color: '#fff', opacity: 0.7 },
                 }}
@@ -357,6 +364,7 @@ export function LoginPage() {
                   border: '2px solid #e5e7eb',
                   color: '#6b7280',
                   bgcolor: 'transparent',
+                  fontFamily: UI_FONT,
                   fontSize: 14,
                   fontWeight: 600,
                   '&:hover': { borderColor: '#d1d5db', bgcolor: 'rgba(255,255,255,.6)' },
@@ -367,9 +375,13 @@ export function LoginPage() {
             </Stack>
           </Stack>
 
-          <Stack direction="row" spacing={0.75} sx={{ mt: 3.5, alignItems: 'center', color: '#9ca3af', fontSize: 11 }}>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{ mt: 3.5, alignItems: 'center', color: '#9ca3af', fontFamily: UI_FONT, fontSize: 11 }}
+          >
             <LockOutlinedIcon sx={{ fontSize: 13 }} />
-            <span>Authorized access only · CMD Approval Hub</span>
+            <span>Authorized access only · Approval Hub</span>
           </Stack>
         </Box>
       </Box>
